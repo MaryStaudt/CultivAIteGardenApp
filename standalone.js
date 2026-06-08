@@ -19,8 +19,30 @@ const USDA_ZONE_BY_ZIP = {
   "73301": { zone: "9a", frost: "2026-02-20", heat: "hot long season", source: "USDA ZIP lookup" }
 };
 
+const EXTENSION_GUIDANCE = [
+  { test: (zip) => /^50|^51|^52/.test(zip), source: "Iowa State University Extension", note: "Use cool-season crops early, wait for warm soil before tomatoes, peppers, cucumbers, and squash." },
+  { test: (zip) => /^60|^61|^62/.test(zip), source: "University of Illinois Extension", note: "Group crops by water needs and keep rows reachable from both sides where possible." },
+  { test: (zip) => /^55|^56/.test(zip), source: "University of Minnesota Extension", note: "Prioritize short-season varieties and protect tender crops from late spring cold snaps." },
+  { test: () => true, source: "USDA and regional extension guidance", note: "Use your frost date, plant spacing, crop family, and water needs to place plants." }
+];
+
+const PLANT_STRATEGY = {
+  tomato: { family: "nightshade", height: "tall", feed: "heavy", pest: "Add basil or marigold nearby to support pest management." },
+  pepper: { family: "nightshade", height: "medium", feed: "heavy", pest: "Pair with basil or marigold and keep leaves off wet soil." },
+  basil: { family: "herb", height: "low", feed: "light", pest: "Place near tomatoes and peppers for easy harvest and companion value." },
+  lettuce: { family: "leaf", height: "low", feed: "medium", pest: "Use part-sun edges so leaves stay tender longer." },
+  carrot: { family: "root", height: "low", feed: "light", pest: "Keep soil loose and avoid crowding roots." },
+  cucumber: { family: "cucurbit", height: "tall", feed: "heavy", pest: "Give airflow and place near pollinator support plants." },
+  zucchini: { family: "cucurbit", height: "wide", feed: "heavy", pest: "Put on an outside edge so large leaves do not block access." },
+  marigold: { family: "flower", height: "low", feed: "light", pest: "Use as border plants near nightshades and cucurbits." },
+  spinach: { family: "leaf", height: "low", feed: "medium", pest: "Use cooler part-sun space and steady moisture." },
+  parsley: { family: "herb", height: "low", feed: "light", pest: "Keep near frequently harvested crops for easy access." }
+};
+
 const state = {
   activePlotId: "plot-1",
+  activePageId: "homePage",
+  completedTasks: [],
   plots: [
     {
       id: "plot-1",
@@ -41,6 +63,7 @@ const state = {
 };
 
 let activeDrag = null;
+let saveTimer = null;
 
 const els = {
   zip: document.querySelector("#zipInput"),
@@ -65,7 +88,21 @@ const els = {
   customForm: document.querySelector("#customPlantForm"),
   customName: document.querySelector("#customPlantName"),
   customSun: document.querySelector("#customPlantSun"),
-  customSpacing: document.querySelector("#customPlantSpacing")
+  customSpacing: document.querySelector("#customPlantSpacing"),
+  navButtons: document.querySelectorAll(".nav-btn"),
+  pages: document.querySelectorAll(".page"),
+  homePlotText: document.querySelector("#homePlotText"),
+  homeZoneText: document.querySelector("#homeZoneText"),
+  homeSaveText: document.querySelector("#homeSaveText"),
+  widthLabel: document.querySelector("#widthLabel"),
+  lengthLabel: document.querySelector("#lengthLabel"),
+  taskPageList: document.querySelector("#taskPageList"),
+  markTasks: document.querySelector("#markTasksBtn"),
+  calendarGrid: document.querySelector("#calendarGrid"),
+  askForm: document.querySelector("#askForm"),
+  askInput: document.querySelector("#askInput"),
+  chatWindow: document.querySelector("#chatWindow"),
+  pageJumps: document.querySelectorAll("[data-page-jump]")
 };
 
 function activePlot() {
@@ -77,6 +114,8 @@ function savePlan() {
   const plan = {
     zip: els.zip.value,
     activePlotId: state.activePlotId,
+    activePageId: state.activePageId,
+    completedTasks: state.completedTasks,
     plantLibrary,
     plots: state.plots.map((plot) => ({
       ...plot,
@@ -85,9 +124,9 @@ function savePlan() {
   };
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(plan));
-    if (els.saveStatus) els.saveStatus.textContent = `Saved ${new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
+    setSaveStatus(`Autosaved ${new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`);
   } catch (error) {
-    if (els.saveStatus) els.saveStatus.textContent = "Not saved on this device";
+    setSaveStatus("Not saved on this device");
     console.warn("SOL could not save this plan", error);
   }
 }
@@ -116,6 +155,8 @@ function loadSavedPlan() {
     if (plan.activePlotId && state.plots.some((plot) => plot.id === plan.activePlotId)) {
       state.activePlotId = plan.activePlotId;
     }
+    if (plan.activePageId) state.activePageId = plan.activePageId;
+    if (Array.isArray(plan.completedTasks)) state.completedTasks = plan.completedTasks;
   } catch (error) {
     if (els.saveStatus) els.saveStatus.textContent = "Saved plan could not load";
     console.warn("SOL could not load the saved plan", error);
@@ -125,6 +166,17 @@ function loadSavedPlan() {
 function saveCurrentPlan() {
   savePlan();
   render();
+}
+
+function setSaveStatus(message) {
+  if (els.saveStatus) els.saveStatus.textContent = message;
+  if (els.homeSaveText) els.homeSaveText.textContent = message;
+}
+
+function queueAutoSave() {
+  window.clearTimeout(saveTimer);
+  setSaveStatus("Saving...");
+  saveTimer = window.setTimeout(savePlan, 180);
 }
 
 function climateForZip(zip) {
@@ -162,8 +214,25 @@ function formatDate(date) {
 function selectedPlantObjects(plot = activePlot()) {
   return [...plot.selected.entries()]
     .filter(([, qty]) => qty > 0)
-    .map(([id, qty]) => ({ ...plantLibrary.find((plant) => plant.id === id), qty }))
+    .map(([id, qty]) => {
+      const plant = plantLibrary.find((item) => item.id === id);
+      return plant ? { ...plant, ...strategyForPlant(plant), qty } : null;
+    })
     .filter((plant) => plant.id);
+}
+
+function strategyForPlant(plant) {
+  return PLANT_STRATEGY[plant.id] || {
+    family: "mixed",
+    height: plant.spacing >= 2.5 ? "wide" : plant.spacing >= 1.8 ? "medium" : "low",
+    feed: plant.spacing >= 2 ? "heavy" : "medium",
+    pest: "Keep spacing open for airflow and easy inspection."
+  };
+}
+
+function extensionForZip(zip) {
+  const digits = String(zip).replace(/\D/g, "");
+  return EXTENSION_GUIDANCE.find((item) => item.test(digits)) || EXTENSION_GUIDANCE[EXTENSION_GUIDANCE.length - 1];
 }
 
 function syncControlsFromPlot() {
@@ -237,23 +306,30 @@ function renderPlantPicker() {
 function generateLayout() {
   syncPlotFromControls();
   const plot = activePlot();
-  const items = selectedPlantObjects(plot);
-  const sunBands = { full: 0.28, part: 0.62, shade: 0.82 };
+  const items = selectedPlantObjects(plot).sort((a, b) => {
+    const heightRank = { tall: 0, wide: 1, medium: 2, low: 3 };
+    const feedRank = { heavy: 0, medium: 1, light: 2 };
+    return (heightRank[a.height] - heightRank[b.height]) || (feedRank[a.feed] - feedRank[b.feed]);
+  });
   let index = 0;
 
   plot.placedPlants = [];
   items.forEach((plant, plantIndex) => {
     for (let i = 0; i < plant.qty; i += 1) {
-      const companionOffset = plant.companions.some((id) => plot.selected.has(id)) ? -0.06 : 0.04;
+      const companionOffset = plant.companions.some((id) => plot.selected.has(id)) ? -0.035 : 0.035;
       const compact = plot.goal === "compact" ? 0.86 : plot.goal === "pollinator" && plant.id === "marigold" ? 1.2 : 1;
-      const columns = Math.max(2, Math.floor(plot.width / Math.max(plant.spacing * compact, 0.7)));
+      const clearPathWidth = plot.width >= 7 ? 2 : 1;
+      const usableWidth = Math.max(2, plot.width - clearPathWidth);
+      const columns = Math.max(2, Math.floor(usableWidth / Math.max(plant.spacing * compact, 0.7)));
       const row = Math.floor(i / columns);
       const col = i % columns;
-      const lane = sunBands[plant.sun] + companionOffset + plantIndex * 0.018;
+      const lane = strategicLane(plant, plantIndex) + companionOffset;
       const wave = Math.sin((index + plantIndex) * 1.7) * 0.035;
-      const x = clamp((col + 0.55) / columns + wave, 0.08, 0.92);
+      const rawX = (col + 0.55) / columns;
+      const sideOffset = plantIndex % 2 === 0 ? -0.08 : 0.08;
+      const x = keepOutOfPath(clamp(rawX + sideOffset + wave, 0.08, 0.92), plant);
       const yBase = (row + 0.8) / Math.max(2.2, Math.ceil(plant.qty / columns) + 1.4);
-      const y = clamp(lane * 0.62 + yBase * 0.34, 0.1, 0.9);
+      const y = clamp(lane * 0.68 + yBase * 0.28, 0.1, 0.9);
       const sizeFt = Math.max(1, plant.spacing * (plot.goal === "compact" ? 0.84 : 1));
       plot.placedPlants.push({ ...plant, uid: `${plot.id}-${plant.id}-${i}`, x, y, sizeFt });
       index += 1;
@@ -262,6 +338,22 @@ function generateLayout() {
 
   spreadOverlaps(plot);
   render();
+}
+
+function strategicLane(plant, plantIndex) {
+  if (plant.id === "marigold") return plantIndex % 2 ? 0.18 : 0.86;
+  if (plant.height === "tall") return 0.2;
+  if (plant.height === "wide") return 0.82;
+  if (plant.sun === "part") return 0.64;
+  return 0.44;
+}
+
+function keepOutOfPath(x, plant) {
+  const buffer = plant.spacing > 2.2 ? 0.16 : 0.1;
+  if (x > 0.5 - buffer && x < 0.5 + buffer) {
+    return x < 0.5 ? 0.5 - buffer : 0.5 + buffer;
+  }
+  return x;
 }
 
 function spreadOverlaps(plot) {
@@ -295,22 +387,28 @@ function clamp(value, min, max) {
 function render() {
   const plot = activePlot();
   const climate = climateForZip(els.zip.value);
+  const extension = extensionForZip(els.zip.value);
   const area = plot.width * plot.length;
   const used = selectedPlantObjects(plot).reduce((sum, plant) => sum + plant.qty * plant.spacing * plant.spacing, 0);
   const density = used / Math.max(area, 1);
 
   els.plotTitle.textContent = `${plot.name}: ${plot.width} x ${plot.length} ft`;
+  els.widthLabel.textContent = `${plot.width} ft wide`;
+  els.lengthLabel.textContent = `${plot.length} ft long`;
   els.zoneText.textContent = `${climate.source === "USDA ZIP lookup" ? "USDA Zone" : "Est. Zone"} ${climate.zone} · Last frost ${formatDate(new Date(`${climate.frost}T12:00:00`))}`;
   els.densityText.textContent = density > 1.05 ? "Tight" : density > 0.72 ? "Productive" : "Comfortable";
   els.plot.style.aspectRatio = `${plot.width} / ${plot.length}`;
   els.plot.style.setProperty("--grid-x", `${100 / plot.width}%`);
   els.plot.style.setProperty("--grid-y", `${100 / plot.length}%`);
+  if (els.homePlotText) els.homePlotText.textContent = `${plot.name}: ${plot.width} x ${plot.length} ft`;
+  if (els.homeZoneText) els.homeZoneText.textContent = `${climate.zone} · ${extension.source}`;
 
   renderPlotTabs();
   renderPlantPicker();
   renderPlot();
-  renderInsights(plot, density, climate);
+  renderInsights(plot, density, climate, extension);
   renderSchedule(plot, climate);
+  renderPages();
   savePlan();
 }
 
@@ -339,39 +437,49 @@ function renderPlot() {
   });
 }
 
-function renderInsights(plot, density, climate) {
+function renderInsights(plot, density, climate, extension = extensionForZip(els.zip.value)) {
   const groups = selectedPlantObjects(plot);
   const companionCount = groups.filter((plant) => plant.companions.some((id) => plot.selected.has(id))).length;
   const water = groups.some((plant) => plant.water === "deep") ? "Deep watering zone on the sunny edge" : "Even watering across shallow rows";
+  const heavyFeeders = groups.filter((plant) => plant.feed === "heavy").map((plant) => plant.name);
+  const pestNote = groups.find((plant) => plant.pest)?.pest || extension.note;
   const notes = [
-    ["Layout logic", `${companionCount} companion pairings, ${density > 1 ? "compressed" : "clear"} spacing, ${climate.heat}.`],
+    ["Layout logic", `${companionCount} companion pairings, ${density > 1 ? "compressed" : "clear"} spacing, center access path, ${climate.heat}.`],
     ["Plot scale", `Each grid square represents 1 sq ft inside a ${plot.width * plot.length} sq ft plot.`],
-    ["Care pattern", water]
+    ["Care pattern", `${water}. ${heavyFeeders.length ? `Feed compost near ${heavyFeeders.slice(0, 2).join(" and ")}.` : pestNote}`]
   ];
   els.insight.innerHTML = notes.map(([title, copy]) => `<div class="insight"><strong>${title}</strong><span>${copy}</span></div>`).join("");
 }
 
-function renderSchedule(plot, climate) {
+function scheduleTasks(plot, climate) {
   const tasks = [];
   selectedPlantObjects(plot).forEach((plant) => {
     tasks.push({
       date: addDays(climate.frost, plant.start),
       title: `Start ${plant.name}`,
-      copy: plant.start < -1 ? "Sow indoors or under cover based on frost timing." : "Direct sow once soil can be worked."
+      copy: plant.start < -1 ? "Sow indoors or under cover based on frost timing." : "Direct sow once soil can be worked.",
+      key: `${plot.id}-${plant.id}-start`
     });
     tasks.push({
       date: addDays(climate.frost, plant.transplant),
       title: `Plant ${plant.name}`,
-      copy: `${plant.sun === "full" ? "Use the brightest band" : "Use a cooler part-sun band"} with ${plant.spacing} ft spacing.`
+      copy: `${plant.sun === "full" ? "Use the brightest band" : "Use a cooler part-sun band"} with ${plant.spacing} ft spacing.`,
+      key: `${plot.id}-${plant.id}-plant`
     });
     tasks.push({
       date: addDays(climate.frost, plant.harvest),
       title: `Harvest ${plant.name}`,
-      copy: `Check every few days and keep watering ${plant.water}.`
+      copy: `Check every few days and keep watering ${plant.water}.`,
+      key: `${plot.id}-${plant.id}-harvest`
     });
   });
 
   tasks.sort((a, b) => a.date - b.date);
+  return tasks;
+}
+
+function renderSchedule(plot, climate) {
+  const tasks = scheduleTasks(plot, climate);
   els.schedule.innerHTML = tasks.length
     ? tasks.slice(0, 16).map((task) => `
       <li class="schedule-item">
@@ -380,6 +488,61 @@ function renderSchedule(plot, climate) {
       </li>
     `).join("")
     : `<li class="schedule-item"><time class="schedule-date">Ready</time><span class="schedule-copy"><strong>No plants selected</strong><span>Add plants to create this plot's calendar.</span></span></li>`;
+}
+
+function renderPages() {
+  els.pages.forEach((page) => page.classList.toggle("active", page.id === state.activePageId));
+  els.navButtons.forEach((button) => button.classList.toggle("active", button.dataset.page === state.activePageId));
+  renderTaskPage();
+  renderCalendarPage();
+  renderAskIntro();
+}
+
+function renderTaskPage() {
+  const plot = activePlot();
+  const tasks = scheduleTasks(plot, climateForZip(els.zip.value)).slice(0, 24);
+  els.taskPageList.innerHTML = tasks.length
+    ? tasks.map((task) => {
+      const complete = state.completedTasks.includes(task.key);
+      return `
+        <li class="schedule-item${complete ? " complete" : ""}">
+          <time class="schedule-date">${formatDate(task.date)}</time>
+          <span class="schedule-copy"><strong>${task.title}</strong><span>${task.copy}</span></span>
+        </li>
+      `;
+    }).join("")
+    : `<li class="schedule-item"><time class="schedule-date">Ready</time><span class="schedule-copy"><strong>No tasks yet</strong><span>Add plants on the Layout page to build your task list.</span></span></li>`;
+}
+
+function renderCalendarPage() {
+  const tasks = scheduleTasks(activePlot(), climateForZip(els.zip.value));
+  const byMonth = tasks.reduce((months, task) => {
+    const month = task.date.toLocaleDateString("en-US", { month: "long" });
+    if (!months[month]) months[month] = [];
+    months[month].push(task);
+    return months;
+  }, {});
+
+  els.calendarGrid.innerHTML = Object.keys(byMonth).length
+    ? Object.entries(byMonth).map(([month, monthTasks]) => `
+      <section class="month-card">
+        <h3>${month}</h3>
+        ${monthTasks.slice(0, 6).map((task) => `<p><strong>${formatDate(task.date)}</strong> ${task.title}</p>`).join("")}
+      </section>
+    `).join("")
+    : `<section class="month-card"><h3>No dates yet</h3><p>Add plants to create a calendar.</p></section>`;
+}
+
+function renderAskIntro() {
+  if (els.chatWindow.children.length) return;
+  const climate = climateForZip(els.zip.value);
+  const extension = extensionForZip(els.zip.value);
+  els.chatWindow.innerHTML = `
+    <div class="chat-message sol-message">
+      <strong>SOL</strong>
+      <span>I can answer using this garden plan, USDA zone ${climate.zone}, and ${extension.source} style guidance.</span>
+    </div>
+  `;
 }
 
 function startDrag(event) {
@@ -463,6 +626,73 @@ function exportPlan() {
   URL.revokeObjectURL(link.href);
 }
 
+function switchPage(pageId) {
+  if (!document.getElementById(pageId)) return;
+  state.activePageId = pageId;
+  renderPages();
+  queueAutoSave();
+}
+
+function markNextTaskDone() {
+  const task = scheduleTasks(activePlot(), climateForZip(els.zip.value)).find((item) => !state.completedTasks.includes(item.key));
+  if (!task) return;
+  state.completedTasks.push(task.key);
+  renderTaskPage();
+  queueAutoSave();
+}
+
+function answerGardenQuestion(question) {
+  const lower = question.toLowerCase();
+  const plot = activePlot();
+  const climate = climateForZip(els.zip.value);
+  const extension = extensionForZip(els.zip.value);
+  const plants = selectedPlantObjects(plot);
+  const plantNames = plants.map((plant) => plant.name).join(", ") || "your selected plants";
+  const heavy = plants.filter((plant) => plant.feed === "heavy").map((plant) => plant.name);
+  const companions = plants.filter((plant) => plant.companions.some((id) => plot.selected.has(id))).map((plant) => plant.name);
+
+  if (lower.includes("water")) {
+    return `For ${plantNames}, keep the center path clear and water at the base. Deep-water ${plants.filter((plant) => plant.water === "deep").map((plant) => plant.name).join(", ") || "larger fruiting plants"} more slowly, and keep leafy crops evenly moist.`;
+  }
+  if (lower.includes("pest") || lower.includes("bug")) {
+    return companions.length
+      ? `Your best pest-management helpers are the companion groupings around ${companions.slice(0, 4).join(", ")}. Keep airflow open and check leaf undersides when you water.`
+      : "Add flowers or herbs near fruiting crops, keep plants spaced for airflow, and inspect leaves when you water.";
+  }
+  if (lower.includes("soil") || lower.includes("compost")) {
+    return heavy.length
+      ? `Add compost before planting and feed the heavier crops first: ${heavy.slice(0, 4).join(", ")}. Rotate those crop families next season so the same bed does not carry all the soil demand.`
+      : "Use compost before planting, mulch after seedlings are established, and rotate crop families next season.";
+  }
+  if (lower.includes("zone") || lower.includes("zip")) {
+    return `For ZIP ${els.zip.value || "your area"}, SOL is using USDA zone ${climate.zone} and a last-frost estimate of ${formatDate(new Date(`${climate.frost}T12:00:00`))}. ${extension.source} guidance says: ${extension.note}`;
+  }
+  return `Based on this ${plot.width} x ${plot.length} ft plot, USDA zone ${climate.zone}, and ${extension.source} guidance, I would keep the access path clear, place tall crops toward the back, group similar water needs, and use companion flowers or herbs near fruiting crops.`;
+}
+
+function askSol(event) {
+  event.preventDefault();
+  const question = els.askInput.value.trim();
+  if (!question) return;
+  const answer = answerGardenQuestion(question);
+  els.chatWindow.insertAdjacentHTML("beforeend", `
+    <div class="chat-message user-message"><strong>You</strong><span>${escapeHtml(question)}</span></div>
+    <div class="chat-message sol-message"><strong>SOL</strong><span>${escapeHtml(answer)}</span></div>
+  `);
+  els.askInput.value = "";
+  els.chatWindow.scrollTop = els.chatWindow.scrollHeight;
+}
+
+function escapeHtml(text) {
+  return text.replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;"
+  })[char]);
+}
+
 function addCustomPlant(event) {
   event.preventDefault();
   const name = els.customName.value.trim();
@@ -516,13 +746,23 @@ els.addPlot.addEventListener("click", addPlot);
 els.shuffle.addEventListener("click", generateLayout);
 els.export.addEventListener("click", exportPlan);
 els.customForm.addEventListener("submit", addCustomPlant);
+els.navButtons.forEach((button) => {
+  button.addEventListener("click", () => switchPage(button.dataset.page));
+});
+els.pageJumps.forEach((button) => {
+  button.addEventListener("click", () => switchPage(button.dataset.pageJump));
+});
 els.plannerForm.addEventListener("submit", (event) => {
   event.preventDefault();
   saveCurrentPlan();
 });
 els.saveNow.addEventListener("click", saveCurrentPlan);
+els.markTasks.addEventListener("click", markNextTaskDone);
+els.askForm.addEventListener("submit", askSol);
 [els.zip, els.width, els.length, els.goal].forEach((input) => {
   input.addEventListener("blur", saveCurrentPlan);
+  input.addEventListener("input", queueAutoSave);
+  input.addEventListener("change", queueAutoSave);
 });
 window.addEventListener("resize", renderPlot);
 window.addEventListener("beforeunload", savePlan);

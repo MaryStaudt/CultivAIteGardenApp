@@ -12,8 +12,49 @@
     <title>SOL</title>
   </head>
   <body>
-    <main class="app-shell">
-      <section class="planner-panel">
+    <main class="app-root">
+      <header class="app-header">
+        <div>
+          <p class="eyebrow">Sustainable, Organized Layout</p>
+          <h1>SOL</h1>
+        </div>
+        <nav class="app-nav" aria-label="SOL pages">
+          <button class="nav-btn active" type="button" data-page="homePage">Home</button>
+          <button class="nav-btn" type="button" data-page="layoutPage">Layout</button>
+          <button class="nav-btn" type="button" data-page="tasksPage">Tasks</button>
+          <button class="nav-btn" type="button" data-page="calendarPage">Calendar</button>
+          <button class="nav-btn" type="button" data-page="askPage">Ask</button>
+        </nav>
+      </header>
+
+      <section class="page active" id="homePage">
+        <div class="home-grid">
+          <section class="home-hero">
+            <p class="eyebrow">Garden planning</p>
+            <h2>Build a smarter garden from your ZIP code, plot size, and plants.</h2>
+            <p>SOL saves your plan as you work, recommends a scaled layout, and turns the garden into simple next steps.</p>
+            <button class="primary-action" type="button" data-page-jump="layoutPage">Start planning</button>
+          </section>
+          <section class="home-status">
+            <div>
+              <span class="context-label">Current plot</span>
+              <strong id="homePlotText">Main bed</strong>
+            </div>
+            <div>
+              <span class="context-label">Growing zone</span>
+              <strong id="homeZoneText">Zone 6a</strong>
+            </div>
+            <div>
+              <span class="context-label">Saved plan</span>
+              <strong id="homeSaveText">Ready</strong>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section class="page" id="layoutPage">
+        <div class="app-shell">
+          <section class="planner-panel">
         <div class="brand-row">
           <div>
             <p class="eyebrow">Sustainable, Organized Layout</p>
@@ -75,6 +116,10 @@
             <span class="context-label">Plan status</span>
             <strong id="saveStatus">Ready to save</strong>
           </div>
+          <div>
+            <span class="context-label">Manual save</span>
+            <button id="saveNowBtn" class="save-now" type="button">Save now</button>
+          </div>
         </div>
 
         <section class="plant-picker" aria-label="Plant picker">
@@ -126,6 +171,10 @@
           </div>
         </div>
         <div class="plot-wrap">
+          <div class="dimension-label dimension-width" id="widthLabel">12 ft wide</div>
+          <div class="dimension-label dimension-length" id="lengthLabel">18 ft long</div>
+          <div class="access-path vertical" aria-hidden="true"></div>
+          <div class="access-path horizontal" aria-hidden="true"></div>
           <div class="plot" id="plot" aria-label="Interactive garden plot"></div>
         </div>
         <div class="insight-strip" id="insightStrip"></div>
@@ -140,7 +189,50 @@
           <button id="exportBtn" type="button">Export</button>
         </div>
         <ol class="schedule-list" id="scheduleList"></ol>
-      </aside>
+          </aside>
+        </div>
+      </section>
+
+      <section class="page" id="tasksPage">
+        <section class="page-panel">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Work list</p>
+              <h2>Tasks</h2>
+            </div>
+            <button id="markTasksBtn" type="button">Mark next task done</button>
+          </div>
+          <ol class="schedule-list page-list" id="taskPageList"></ol>
+        </section>
+      </section>
+
+      <section class="page" id="calendarPage">
+        <section class="page-panel">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Season view</p>
+              <h2>Calendar</h2>
+            </div>
+          </div>
+          <div class="calendar-grid" id="calendarGrid"></div>
+        </section>
+      </section>
+
+      <section class="page" id="askPage">
+        <section class="page-panel ask-panel">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Ask SOL</p>
+              <h2>Garden assistant</h2>
+            </div>
+          </div>
+          <div class="chat-window" id="chatWindow"></div>
+          <form class="ask-form" id="askForm">
+            <input id="askInput" placeholder="Ask about watering, pests, spacing, or what to plant next" />
+            <button type="submit">Ask</button>
+          </form>
+        </section>
+      </section>
     </main>
 
     <script src="./src/standalone.js"></script>

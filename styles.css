@@ -44,12 +44,131 @@ button {
   cursor: pointer;
 }
 
+.app-root {
+  min-height: 100vh;
+  padding: 16px;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin: 0 auto 16px;
+  max-width: 1480px;
+}
+
+.app-header h1 {
+  font-size: 2.25rem;
+}
+
+.app-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.nav-btn,
+.primary-action {
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  font-weight: 900;
+}
+
+.nav-btn.active,
+.primary-action {
+  background: var(--leaf-dark);
+  color: #fff;
+  border-color: var(--leaf-dark);
+}
+
+.page {
+  display: none;
+}
+
+.page.active {
+  display: block;
+}
+
+.home-grid,
+.page-panel {
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.home-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.65fr);
+  gap: 16px;
+}
+
+.home-hero,
+.home-status,
+.page-panel {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: var(--shadow);
+}
+
+.home-hero {
+  display: grid;
+  align-content: center;
+  gap: 18px;
+  min-height: 440px;
+  padding: clamp(24px, 5vw, 56px);
+}
+
+.home-hero h2 {
+  max-width: 720px;
+  font-size: clamp(2rem, 5vw, 4.5rem);
+  line-height: 0.98;
+}
+
+.home-hero p:not(.eyebrow) {
+  max-width: 620px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 1.05rem;
+  line-height: 1.5;
+}
+
+.primary-action {
+  justify-self: start;
+}
+
+.home-status {
+  display: grid;
+  align-content: center;
+  gap: 14px;
+  min-height: 280px;
+  padding: 24px;
+}
+
+.home-status > div {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f3f7ee;
+}
+
+.page-panel {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+}
+
 .app-shell {
   display: grid;
   grid-template-columns: minmax(290px, 350px) minmax(440px, 1fr) minmax(300px, 380px);
   gap: 16px;
-  min-height: 100vh;
-  padding: 16px;
+  max-width: 1480px;
+  min-height: calc(100vh - 110px);
+  margin: 0 auto;
 }
 
 .planner-panel,
@@ -179,7 +298,7 @@ select:focus {
 
 .context-card {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
   padding: 14px;
   border: 1px solid var(--line);
@@ -191,6 +310,17 @@ select:focus {
   display: block;
   font-size: 0.92rem;
   line-height: 1.25;
+}
+
+.save-now {
+  min-height: 34px;
+  width: 100%;
+  padding: 0 10px;
+  border-radius: 8px;
+  background: var(--leaf-dark);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 900;
 }
 
 .plant-picker {
@@ -371,10 +501,11 @@ select:focus {
 }
 
 .plot-wrap {
+  position: relative;
   display: grid;
   place-items: center;
   min-height: 0;
-  padding: 10px;
+  padding: 34px 34px 22px 46px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background:
@@ -386,6 +517,7 @@ select:focus {
 
 .plot {
   position: relative;
+  z-index: 1;
   width: min(100%, 760px);
   max-height: 100%;
   aspect-ratio: 12 / 18;
@@ -399,6 +531,55 @@ select:focus {
     #7f654c;
   background-size: var(--grid-x, 56px) var(--grid-y, 56px), var(--grid-x, 56px) var(--grid-y, 56px), auto, auto;
   touch-action: none;
+}
+
+.dimension-label {
+  position: absolute;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  min-height: 24px;
+  padding: 0 9px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--soil-dark);
+  font-size: 0.76rem;
+  font-weight: 900;
+  pointer-events: none;
+}
+
+.dimension-width {
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.dimension-length {
+  top: 50%;
+  left: 8px;
+  transform: translateY(-50%) rotate(-90deg);
+  transform-origin: center;
+}
+
+.access-path {
+  position: absolute;
+  z-index: 2;
+  border-radius: 999px;
+  background: rgba(248, 250, 244, 0.28);
+  outline: 1px dashed rgba(255, 255, 255, 0.58);
+  pointer-events: none;
+}
+
+.access-path.vertical {
+  top: 46px;
+  bottom: 30px;
+  left: 50%;
+  width: min(12%, 54px);
+  transform: translateX(-50%);
+}
+
+.access-path.horizontal {
+  display: none;
 }
 
 .plant-chip {
@@ -523,6 +704,14 @@ select:focus {
   background: #fff;
 }
 
+.schedule-item.complete {
+  opacity: 0.58;
+}
+
+.schedule-item.complete .schedule-copy strong {
+  text-decoration: line-through;
+}
+
 .schedule-date {
   color: var(--leaf-dark);
   font-size: 0.76rem;
@@ -543,6 +732,89 @@ select:focus {
   line-height: 1.35;
 }
 
+.page-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.month-card {
+  min-height: 170px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.month-card h3 {
+  margin: 0 0 10px;
+  font-size: 1rem;
+}
+
+.month-card p {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.ask-panel {
+  min-height: calc(100vh - 140px);
+  grid-template-rows: auto minmax(260px, 1fr) auto;
+}
+
+.chat-window {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  overflow: auto;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f3f7ee;
+}
+
+.chat-message {
+  display: grid;
+  gap: 5px;
+  max-width: 760px;
+  padding: 12px;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid var(--line);
+}
+
+.user-message {
+  justify-self: end;
+  background: #e9f3eb;
+}
+
+.chat-message span {
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.ask-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+}
+
+.ask-form button,
+#markTasksBtn {
+  min-height: 42px;
+  padding: 0 14px;
+  border-radius: 8px;
+  background: var(--ink);
+  color: #fff;
+  font-weight: 900;
+}
+
 @media (max-width: 1100px) {
   .app-shell {
     grid-template-columns: 320px minmax(0, 1fr);
@@ -556,12 +828,34 @@ select:focus {
   .schedule-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .calendar-grid,
+  .page-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 760px) {
+  .app-root {
+    padding: 10px;
+  }
+
+  .app-header,
+  .home-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .app-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .home-hero {
+    min-height: 360px;
+  }
+
   .app-shell {
     grid-template-columns: 1fr;
-    padding: 10px;
   }
 
   .planner-panel,
@@ -573,7 +867,10 @@ select:focus {
   .control-grid,
   .context-card,
   .insight-strip,
-  .schedule-list {
+  .schedule-list,
+  .calendar-grid,
+  .page-list,
+  .ask-form {
     grid-template-columns: 1fr;
   }
 
