@@ -24,7 +24,7 @@
           </button>
         </div>
 
-        <form class="control-grid">
+        <form class="control-grid" id="plannerForm">
           <label>
             ZIP code
             <input id="zipInput" inputmode="numeric" maxlength="5" placeholder="60614" value="60614" />
@@ -71,6 +71,10 @@
             <span class="context-label">Plan density</span>
             <strong id="densityText">Comfortable</strong>
           </div>
+          <div>
+            <span class="context-label">Plan status</span>
+            <strong id="saveStatus">Ready to save</strong>
+          </div>
         </div>
 
         <section class="plant-picker" aria-label="Plant picker">
@@ -105,7 +109,7 @@
               </div>
             </label>
           </div>
-          <button type="submit">Add to plot</button>
+          <button id="customPlantBtn" type="submit">Add to plot</button>
         </form>
       </section>
 
@@ -139,6 +143,6 @@
       </aside>
     </main>
 
-    <script type="module" src="./src/standalone.js"></script>
+    <script src="./src/standalone.js"></script>
   </body>
 </html>

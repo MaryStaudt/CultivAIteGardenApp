@@ -1,0 +1,592 @@
+:root {
+  color-scheme: light;
+  --ink: #17201b;
+  --muted: #66736a;
+  --line: #d7ded4;
+  --paper: #f8faf4;
+  --panel: #ffffff;
+  --soil: #8b6f55;
+  --soil-dark: #6f5845;
+  --leaf: #3f8d5a;
+  --leaf-dark: #246843;
+  --flower: #d87ca0;
+  --gold: #e5aa3f;
+  --water: #4c8fad;
+  --shadow: 0 18px 60px rgba(41, 50, 39, 0.12);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    linear-gradient(rgba(248, 250, 244, 0.86), rgba(248, 250, 244, 0.95)),
+    repeating-linear-gradient(90deg, rgba(63, 141, 90, 0.09) 0 1px, transparent 1px 86px),
+    repeating-linear-gradient(0deg, rgba(139, 111, 85, 0.08) 0 1px, transparent 1px 86px),
+    #f8faf4;
+  color: var(--ink);
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+button {
+  border: 0;
+  cursor: pointer;
+}
+
+.app-shell {
+  display: grid;
+  grid-template-columns: minmax(290px, 350px) minmax(440px, 1fr) minmax(300px, 380px);
+  gap: 16px;
+  min-height: 100vh;
+  padding: 16px;
+}
+
+.planner-panel,
+.schedule-panel,
+.garden-stage {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+
+.planner-panel,
+.schedule-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 20px;
+  overflow: auto;
+}
+
+.garden-stage {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 14px;
+  padding: 18px;
+  min-height: 620px;
+}
+
+.brand-row,
+.section-heading,
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.eyebrow,
+.context-label {
+  display: block;
+  margin: 0 0 4px;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+h1,
+h2 {
+  margin: 0;
+  letter-spacing: 0;
+}
+
+h1 {
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 0.95;
+}
+
+h2 {
+  font-size: 1.05rem;
+}
+
+.icon-button {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+  background: var(--leaf-dark);
+  color: white;
+  font-size: 1.3rem;
+}
+
+.control-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+label {
+  display: grid;
+  gap: 7px;
+  color: #334037;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+input,
+select {
+  min-width: 0;
+  width: 100%;
+  height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  padding: 0 12px;
+  outline: none;
+}
+
+input:focus,
+select:focus {
+  border-color: var(--leaf);
+  box-shadow: 0 0 0 3px rgba(63, 141, 90, 0.18);
+}
+
+.unit-input {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 36px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.unit-input input {
+  border: 0;
+  border-radius: 0;
+}
+
+.unit-input span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.context-card {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f3f7ee;
+}
+
+.context-card strong {
+  display: block;
+  font-size: 0.92rem;
+  line-height: 1.25;
+}
+
+.plant-picker {
+  display: grid;
+  gap: 12px;
+}
+
+.plot-manager,
+.custom-plant {
+  display: grid;
+  gap: 12px;
+}
+
+.plot-manager button,
+.custom-plant button {
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 8px;
+  background: var(--ink);
+  color: #fff;
+  font-weight: 900;
+}
+
+.plot-tabs {
+  display: grid;
+  gap: 8px;
+}
+
+.plot-manager .plot-tab {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  text-align: left;
+}
+
+.plot-manager .plot-tab.active {
+  border-color: rgba(63, 141, 90, 0.68);
+  background: #eef7ef;
+}
+
+.plot-manager .plot-tab span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 900;
+}
+
+.plot-manager .plot-tab small {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.section-heading > span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.plant-list {
+  display: grid;
+  gap: 8px;
+}
+
+.plant-option {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 56px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+}
+
+.plant-option.active {
+  border-color: rgba(63, 141, 90, 0.68);
+  background: #eef7ef;
+}
+
+.plant-badge {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  color: white;
+  font-weight: 900;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+}
+
+.plant-meta {
+  min-width: 0;
+}
+
+.plant-meta strong,
+.plant-meta span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plant-meta strong {
+  font-size: 0.9rem;
+}
+
+.plant-meta span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  margin-top: 2px;
+}
+
+.stepper {
+  display: grid;
+  grid-template-columns: 28px 28px 28px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.stepper button {
+  width: 28px;
+  height: 30px;
+  background: #f7f8f5;
+  color: var(--ink);
+  font-weight: 900;
+}
+
+.stepper output {
+  text-align: center;
+  color: var(--ink);
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.legend i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.sun {
+  background: var(--gold);
+}
+
+.part {
+  background: var(--leaf);
+}
+
+.shade {
+  background: var(--water);
+}
+
+.plot-wrap {
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.16) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(255, 255, 255, 0.16) 1px, transparent 1px),
+    linear-gradient(135deg, var(--soil), var(--soil-dark));
+  background-size: 40px 40px, 40px 40px, auto;
+}
+
+.plot {
+  position: relative;
+  width: min(100%, 760px);
+  max-height: 100%;
+  aspect-ratio: 12 / 18;
+  overflow: hidden;
+  border: 3px solid rgba(255, 255, 255, 0.75);
+  border-radius: 8px;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.18) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(255, 255, 255, 0.18) 1px, transparent 1px),
+    radial-gradient(circle at 18% 14%, rgba(229, 170, 63, 0.28), transparent 22%),
+    #7f654c;
+  background-size: var(--grid-x, 56px) var(--grid-y, 56px), var(--grid-x, 56px) var(--grid-y, 56px), auto, auto;
+  touch-action: none;
+}
+
+.plant-chip {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  width: var(--size, 56px);
+  height: var(--size, 56px);
+  border: 2px solid rgba(255, 255, 255, 0.86);
+  border-radius: 50%;
+  color: white;
+  font-size: clamp(0.7rem, 1.6vw, 0.88rem);
+  font-weight: 900;
+  line-height: 1;
+  text-align: center;
+  box-shadow: 0 7px 20px rgba(39, 31, 25, 0.26);
+  user-select: none;
+  transform: translate(-50%, -50%);
+  transition: box-shadow 0.15s ease, scale 0.15s ease;
+}
+
+.plant-chip::before,
+.plant-chip::after {
+  content: "";
+  position: absolute;
+  border-radius: 60% 40% 60% 40%;
+  background: rgba(255, 255, 255, 0.2);
+  pointer-events: none;
+}
+
+.plant-chip::before {
+  inset: 10% 54% 46% 14%;
+  transform: rotate(-26deg);
+}
+
+.plant-chip::after {
+  inset: 48% 16% 12% 52%;
+  transform: rotate(28deg);
+}
+
+.plant-chip.dragging {
+  z-index: 5;
+  scale: 1.06;
+  box-shadow: 0 15px 32px rgba(24, 18, 14, 0.34);
+}
+
+.plant-chip small {
+  position: relative;
+  z-index: 1;
+  display: block;
+  max-width: 84%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.24);
+}
+
+.insight-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.insight {
+  min-height: 74px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.insight strong,
+.insight span {
+  display: block;
+}
+
+.insight strong {
+  margin-bottom: 4px;
+  font-size: 0.86rem;
+}
+
+.insight span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.schedule-panel button,
+#exportBtn {
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 8px;
+  background: var(--ink);
+  color: #fff;
+  font-weight: 900;
+}
+
+.empty-state {
+  display: grid;
+  place-items: center;
+  min-height: 180px;
+  color: rgba(255, 255, 255, 0.88);
+  font-weight: 900;
+  text-align: center;
+}
+
+.schedule-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.schedule-item {
+  display: grid;
+  grid-template-columns: 68px minmax(0, 1fr);
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.schedule-date {
+  color: var(--leaf-dark);
+  font-size: 0.76rem;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.schedule-copy strong {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 0.88rem;
+}
+
+.schedule-copy span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+@media (max-width: 1100px) {
+  .app-shell {
+    grid-template-columns: 320px minmax(0, 1fr);
+  }
+
+  .schedule-panel {
+    grid-column: 1 / -1;
+    max-height: none;
+  }
+
+  .schedule-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+    padding: 10px;
+  }
+
+  .planner-panel,
+  .schedule-panel,
+  .garden-stage {
+    padding: 14px;
+  }
+
+  .control-grid,
+  .context-card,
+  .insight-strip,
+  .schedule-list {
+    grid-template-columns: 1fr;
+  }
+
+  .toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .legend {
+    justify-content: flex-start;
+  }
+
+  .garden-stage {
+    min-height: 560px;
+  }
+}
