@@ -1,4 +1,4 @@
-const CACHE_NAME = "sol-pwa-v7";
+const CACHE_NAME = "sol-pwa-v8";
 const APP_SHELL = [
   "/",
   "/index.html",
@@ -6,8 +6,7 @@ const APP_SHELL = [
   "/icons/icon-192.png",
   "/icons/icon-512.png",
   "/icons/apple-touch-icon.png",
-  "/src/styles.css",
-  "/src/standalone.js"
+  "/sw.js"
 ];
 
 self.addEventListener("install", (event) => {
