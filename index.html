@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#246843" />
+    <meta name="description" content="SOL helps gardeners create Sustainable, Organized Layouts by ZIP code, plot size, and plant choices." />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <link rel="stylesheet" href="./src/styles.css" />
+    <title>SOL</title>
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="planner-panel">
+        <div class="brand-row">
+          <div>
+            <p class="eyebrow">Sustainable, Organized Layout</p>
+            <h1>SOL</h1>
+          </div>
+          <button class="icon-button" id="shuffleBtn" type="button" title="Regenerate layout" aria-label="Regenerate layout">
+            <span aria-hidden="true">↻</span>
+          </button>
+        </div>
+
+        <form class="control-grid">
+          <label>
+            ZIP code
+            <input id="zipInput" inputmode="numeric" maxlength="5" placeholder="60614" value="60614" />
+          </label>
+          <label>
+            Plot width
+            <div class="unit-input">
+              <input id="widthInput" type="number" min="2" max="60" step="1" value="12" />
+              <span>ft</span>
+            </div>
+          </label>
+          <label>
+            Plot length
+            <div class="unit-input">
+              <input id="lengthInput" type="number" min="2" max="80" step="1" value="18" />
+              <span>ft</span>
+            </div>
+          </label>
+          <label>
+            Layout goal
+            <select id="goalInput">
+              <option value="balanced">Balanced harvest</option>
+              <option value="pollinator">Pollinator friendly</option>
+              <option value="compact">Compact spacing</option>
+              <option value="lowWater">Lower water</option>
+            </select>
+          </label>
+        </form>
+
+        <section class="plot-manager" aria-label="Garden plots">
+          <div class="section-heading">
+            <h2>Plots</h2>
+            <button id="addPlotBtn" type="button">Add plot</button>
+          </div>
+          <div class="plot-tabs" id="plotTabs"></div>
+        </section>
+
+        <div class="context-card">
+          <div>
+            <span class="context-label">Growing context</span>
+            <strong id="zoneText">Zone 6a · Last frost Apr 24</strong>
+          </div>
+          <div>
+            <span class="context-label">Plan density</span>
+            <strong id="densityText">Comfortable</strong>
+          </div>
+        </div>
+
+        <section class="plant-picker" aria-label="Plant picker">
+          <div class="section-heading">
+            <h2>Plants</h2>
+            <span id="plantCount">0 selected</span>
+          </div>
+          <div class="plant-list" id="plantList"></div>
+        </section>
+
+        <form class="custom-plant" id="customPlantForm">
+          <div class="section-heading">
+            <h2>Add a plant</h2>
+          </div>
+          <label>
+            Plant name
+            <input id="customPlantName" placeholder="Kale" />
+          </label>
+          <div class="control-grid">
+            <label>
+              Sun
+              <select id="customPlantSun">
+                <option value="full">Full sun</option>
+                <option value="part">Part sun</option>
+              </select>
+            </label>
+            <label>
+              Spacing
+              <div class="unit-input">
+                <input id="customPlantSpacing" type="number" min="0.5" max="8" step="0.5" value="1.5" />
+                <span>ft</span>
+              </div>
+            </label>
+          </div>
+          <button type="submit">Add to plot</button>
+        </form>
+      </section>
+
+      <section class="garden-stage">
+        <div class="toolbar">
+          <div>
+            <p class="eyebrow">Scaled plot</p>
+            <h2 id="plotTitle">Main bed: 12 x 18 ft</h2>
+          </div>
+          <div class="legend">
+            <span><i class="sun"></i> full sun</span>
+            <span><i class="part"></i> part sun</span>
+            <span><i class="shade"></i> shade</span>
+          </div>
+        </div>
+        <div class="plot-wrap">
+          <div class="plot" id="plot" aria-label="Interactive garden plot"></div>
+        </div>
+        <div class="insight-strip" id="insightStrip"></div>
+      </section>
+
+      <aside class="schedule-panel">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Companion schedule</p>
+            <h2>Next steps</h2>
+          </div>
+          <button id="exportBtn" type="button">Export</button>
+        </div>
+        <ol class="schedule-list" id="scheduleList"></ol>
+      </aside>
+    </main>
+
+    <script type="module" src="./src/standalone.js"></script>
+  </body>
+</html>
