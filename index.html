@@ -1356,6 +1356,15 @@ function climateForZip(zip) {
   return { zone: "9a", frost: "2026-03-02", heat: "dry summer edges", source: "regional estimate" };
 }
 
+function zipFromQuestion(question) {
+  const match = String(question || "").match(/\b\d{5}\b/);
+  return match ? match[0] : "";
+}
+
+function zipForQuestion(question) {
+  return zipFromQuestion(question) || els.zip.value;
+}
+
 function addDays(dateText, days) {
   const date = new Date(`${dateText}T12:00:00`);
   date.setDate(date.getDate() + days);
@@ -1907,14 +1916,16 @@ function markNextTaskDone() {
 
 function answerGardenQuestion(question) {
   const lower = question.toLowerCase();
+  const questionZip = zipForQuestion(question);
   const plot = activePlot();
-  const climate = climateForZip(els.zip.value);
-  const extension = extensionForZip(els.zip.value);
+  const climate = climateForZip(questionZip);
+  const extension = extensionForZip(questionZip);
   const assessment = assessGarden(plot, climate, extension);
   const plants = selectedPlantObjects(plot);
   const plantNames = plants.map((plant) => plant.name).join(", ") || "your selected plants";
   const heavy = plants.filter((plant) => plant.feed === "heavy").map((plant) => plant.name);
   const companions = plants.filter((plant) => plant.companions.some((id) => plot.selected.has(id))).map((plant) => plant.name);
+  const zipNote = questionZip !== els.zip.value ? `I used ZIP ${questionZip} from your question instead of the planner field, which is currently ${els.zip.value}. ` : "";
 
   if (lower.includes("layout") || lower.includes("where") || lower.includes("place")) {
     return `I would keep the center path open, put tall crops toward the back, push wide crops like zucchini to outer edges, group deep-water crops together, and keep quick harvest crops near the front. Current check: ${assessment.warnings[0] || assessment.wins[0]}`;
@@ -1946,19 +1957,29 @@ function answerGardenQuestion(question) {
     const families = Object.keys(assessment.families).map(titleCase).join(", ");
     return `This plot currently includes these crop families: ${families || "none yet"}. Next season, move nightshades and cucurbits to a different plot when possible, and follow heavy feeders with lighter crops or soil-building legumes.`;
   }
-  if (lower.includes("zone") || lower.includes("zip")) {
-    return `For ZIP ${els.zip.value || "your area"}, SOL is using USDA zone ${climate.zone} and a last-frost estimate of ${formatDate(new Date(`${climate.frost}T12:00:00`))}. ${extension.source} guidance says: ${extension.note}`;
+  if (lower.includes("plant next") || lower.includes("what should i plant") || lower.includes("what to plant")) {
+    const coolSeason = climate.zone.startsWith("4") || climate.zone.startsWith("5") || climate.zone.startsWith("6");
+    const suggestion = coolSeason
+      ? "For that season profile, good starter choices are lettuce, spinach, radish, carrot, parsley, bush beans after frost, and warm-season crops like tomato or pepper only after the soil warms."
+      : "For that warmer season profile, focus on herbs, beans, peppers, tomatoes, cucumbers, and heat-tolerant greens while managing water carefully.";
+    return `${zipNote}For ZIP ${questionZip}, SOL is using USDA zone ${climate.zone}. ${suggestion} Based on your current plot, keep heavy feeders composted and leave the center access path open.`;
   }
-  return `Based on this ${plot.width} x ${plot.length} ft plot, USDA zone ${climate.zone}, and ${extension.source} guidance, I would keep the access path clear, place tall crops toward the back, group similar water needs, use companion flowers or herbs near fruiting crops, and watch this first: ${assessment.warnings[0] || assessment.wins[0]}`;
+  if (lower.includes("zone") || lower.includes("zip")) {
+    return `${zipNote}For ZIP ${questionZip || "your area"}, SOL is using USDA zone ${climate.zone} and a last-frost estimate of ${formatDate(new Date(`${climate.frost}T12:00:00`))}. ${extension.source} guidance says: ${extension.note}`;
+  }
+  return `${zipNote}Based on this ${plot.width} x ${plot.length} ft plot, USDA zone ${climate.zone}, and ${extension.source} guidance, I would keep the access path clear, place tall crops toward the back, group similar water needs, use companion flowers or herbs near fruiting crops, and watch this first: ${assessment.warnings[0] || assessment.wins[0]}`;
 }
 
-function gardenAiContext() {
+function gardenAiContext(question = "") {
+  const questionZip = zipForQuestion(question);
   const plot = activePlot();
-  const climate = climateForZip(els.zip.value);
-  const extension = extensionForZip(els.zip.value);
+  const climate = climateForZip(questionZip);
+  const extension = extensionForZip(questionZip);
   const assessment = assessGarden(plot, climate, extension);
   return {
-    zip: els.zip.value,
+    zip: questionZip,
+    plannerZip: els.zip.value,
+    zipSource: zipFromQuestion(question) ? "question" : "planner field",
     climate,
     extension,
     activePlot: {
@@ -2002,13 +2023,14 @@ async function askSol(event) {
     const response = await fetch("/api/ask", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question, context: gardenAiContext() })
+      body: JSON.stringify({ question, context: gardenAiContext(question) })
     });
     const data = await response.json();
     if (!response.ok || !data.answer) throw new Error(data.error || "AI answer unavailable");
     answer = data.answer;
   } catch (error) {
-    answer = `${answerGardenQuestion(question)}\n\nAI backend note: I used SOL's built-in garden logic because the live AI connection is not available yet.`;
+    const reason = error.message ? ` Reason: ${error.message}` : "";
+    answer = `${answerGardenQuestion(question)}\n\nAI backend note: I used SOL's built-in garden logic because the live AI connection is not available yet.${reason}`;
     console.warn("SOL AI fallback used", error);
   }
 

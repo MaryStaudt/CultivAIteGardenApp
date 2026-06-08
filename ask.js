@@ -1,5 +1,6 @@
 const OPENAI_URL = "https://api.openai.com/v1/responses";
 const DEFAULT_MODEL = "gpt-5.2";
+const FALLBACK_MODEL = "gpt-5";
 
 function sendJson(response, status, body) {
   response.statusCode = status;
@@ -31,6 +32,8 @@ function compactContext(context = {}) {
 
   return {
     zip: context.zip,
+    plannerZip: context.plannerZip,
+    zipSource: context.zipSource,
     usdaZone: climate.zone,
     lastFrost: climate.frost,
     localGuidanceSource: extension.source,
@@ -49,14 +52,14 @@ function compactContext(context = {}) {
   };
 }
 
-async function callOpenAI(payload, apiKey, includeWebSearch = true) {
+async function callOpenAI(payload, apiKey, model, includeWebSearch = true) {
   const response = await fetch(OPENAI_URL, {
     method: "POST",
     headers: {
       "Authorization": `Bearer ${apiKey}`,
       "Content-Type": "application/json"
     },
-    body: JSON.stringify(includeWebSearch ? payload : { ...payload, tools: undefined })
+    body: JSON.stringify(includeWebSearch ? { ...payload, model } : { ...payload, model, tools: undefined })
   });
 
   const data = await response.json().catch(() => ({}));
@@ -88,12 +91,13 @@ module.exports = async function handler(request, response) {
     }
 
     const gardenContext = compactContext(context);
+    const modelCandidates = [...new Set([process.env.OPENAI_MODEL, DEFAULT_MODEL, FALLBACK_MODEL].filter(Boolean))];
     const payload = {
-      model: process.env.OPENAI_MODEL || DEFAULT_MODEL,
       instructions: [
         "You are SOL, an AI gardening assistant for a web app called Sustainable, Organized Layout.",
         "Use plain, practical language for home gardeners.",
-        "Base advice first on the provided garden context: ZIP, USDA zone, frost timing, plot dimensions, plant list, spacing, crop families, soil demand, and warnings.",
+        "Base advice first on the provided garden context: ZIP, ZIP source, USDA zone, frost timing, plot dimensions, plant list, spacing, crop families, soil demand, and warnings.",
+        "If the user's question includes a ZIP code that differs from the planner ZIP, prioritize the ZIP from the question and briefly say so.",
         "When discussing regional facts, prefer USDA and university extension style guidance. If exact local extension data is not available, say what should be verified locally.",
         "Do not give medical, pesticide-label, or legal certainty. For pesticide use, tell the user to follow the product label and local extension guidance.",
         "Keep answers concise: 1 to 4 short paragraphs, with specific next actions."
@@ -113,11 +117,19 @@ module.exports = async function handler(request, response) {
     };
 
     let data;
-    try {
-      data = await callOpenAI(payload, apiKey, true);
-    } catch (error) {
-      data = await callOpenAI(payload, apiKey, false);
+    let lastError;
+    for (const model of modelCandidates) {
+      for (const includeWebSearch of [true, false]) {
+        try {
+          data = await callOpenAI(payload, apiKey, model, includeWebSearch);
+          break;
+        } catch (error) {
+          lastError = error;
+        }
+      }
+      if (data) break;
     }
+    if (!data) throw lastError || new Error("OpenAI request failed.");
 
     sendJson(response, 200, {
       answer: data.output_text || "I could not create an answer this time. Try asking again with a little more detail."
