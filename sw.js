@@ -1,4 +1,4 @@
-const CACHE_NAME = "sol-pwa-v9";
+const CACHE_NAME = "sol-pwa-v10";
 const APP_SHELL = [
   "/",
   "/index.html",
@@ -23,6 +23,7 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
+  if (new URL(event.request.url).pathname.startsWith("/api/")) return;
   event.respondWith(
     fetch(event.request)
       .then((response) => {

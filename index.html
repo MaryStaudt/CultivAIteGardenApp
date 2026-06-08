@@ -814,9 +814,14 @@ select:focus {
 }
 
 .chat-message span {
+  white-space: pre-line;
   color: var(--muted);
   font-size: 0.9rem;
   line-height: 1.45;
+}
+
+.thinking-message span {
+  color: var(--leaf-dark);
 }
 
 .ask-form {
@@ -1793,7 +1798,7 @@ function renderAskIntro() {
   els.chatWindow.innerHTML = `
     <div class="chat-message sol-message">
       <strong>SOL</strong>
-      <span>I can answer using this garden plan, USDA zone ${climate.zone}, and ${extension.source} style guidance.</span>
+      <span>I can answer using this garden plan, USDA zone ${climate.zone}, and ${extension.source} style guidance. If the AI backend is connected, I will use it automatically.</span>
     </div>
   `;
 }
@@ -1947,16 +1952,72 @@ function answerGardenQuestion(question) {
   return `Based on this ${plot.width} x ${plot.length} ft plot, USDA zone ${climate.zone}, and ${extension.source} guidance, I would keep the access path clear, place tall crops toward the back, group similar water needs, use companion flowers or herbs near fruiting crops, and watch this first: ${assessment.warnings[0] || assessment.wins[0]}`;
 }
 
-function askSol(event) {
+function gardenAiContext() {
+  const plot = activePlot();
+  const climate = climateForZip(els.zip.value);
+  const extension = extensionForZip(els.zip.value);
+  const assessment = assessGarden(plot, climate, extension);
+  return {
+    zip: els.zip.value,
+    climate,
+    extension,
+    activePlot: {
+      name: plot.name,
+      width: plot.width,
+      length: plot.length,
+      goal: plot.goal,
+      plants: selectedPlantObjects(plot).map((plant) => ({
+        name: plant.name,
+        quantity: plant.qty,
+        spacingFeet: plant.spacing,
+        sun: plant.sun,
+        water: plant.water,
+        family: plant.family,
+        feed: plant.feed,
+        companions: plant.companions
+      }))
+    },
+    assessment: {
+      density: Number(assessment.density.toFixed(2)),
+      warnings: assessment.warnings,
+      wins: assessment.wins
+    }
+  };
+}
+
+async function askSol(event) {
   event.preventDefault();
   const question = els.askInput.value.trim();
   if (!question) return;
-  const answer = answerGardenQuestion(question);
+
   els.chatWindow.insertAdjacentHTML("beforeend", `
     <div class="chat-message user-message"><strong>You</strong><span>${escapeHtml(question)}</span></div>
-    <div class="chat-message sol-message"><strong>SOL</strong><span>${escapeHtml(answer)}</span></div>
+    <div class="chat-message sol-message thinking-message" id="thinkingMessage"><strong>SOL</strong><span>Thinking through your garden plan...</span></div>
   `);
   els.askInput.value = "";
+  els.chatWindow.scrollTop = els.chatWindow.scrollHeight;
+
+  let answer = "";
+  try {
+    const response = await fetch("/api/ask", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question, context: gardenAiContext() })
+    });
+    const data = await response.json();
+    if (!response.ok || !data.answer) throw new Error(data.error || "AI answer unavailable");
+    answer = data.answer;
+  } catch (error) {
+    answer = `${answerGardenQuestion(question)}\n\nAI backend note: I used SOL's built-in garden logic because the live AI connection is not available yet.`;
+    console.warn("SOL AI fallback used", error);
+  }
+
+  const thinking = document.querySelector("#thinkingMessage");
+  if (thinking) {
+    thinking.classList.remove("thinking-message");
+    thinking.removeAttribute("id");
+    thinking.querySelector("span").textContent = answer;
+  }
   els.chatWindow.scrollTop = els.chatWindow.scrollHeight;
 }
 
