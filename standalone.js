@@ -12,6 +12,12 @@ const plantLibrary = [
 ];
 
 const STORAGE_KEY = "sol-garden-plan-v1";
+const USDA_ZONE_BY_ZIP = {
+  "50161": { zone: "5b", frost: "2026-05-02", heat: "upper Midwest season", source: "USDA ZIP lookup" },
+  "60614": { zone: "6a", frost: "2026-04-24", heat: "shorter spring", source: "USDA ZIP lookup" },
+  "90210": { zone: "10b", frost: "2026-01-20", heat: "long warm season", source: "USDA ZIP lookup" },
+  "73301": { zone: "9a", frost: "2026-02-20", heat: "hot long season", source: "USDA ZIP lookup" }
+};
 
 const state = {
   activePlotId: "plot-1",
@@ -38,6 +44,7 @@ let activeDrag = null;
 
 const els = {
   zip: document.querySelector("#zipInput"),
+  plannerForm: document.querySelector("#plannerForm"),
   width: document.querySelector("#widthInput"),
   length: document.querySelector("#lengthInput"),
   goal: document.querySelector("#goalInput"),
@@ -48,6 +55,7 @@ const els = {
   zoneText: document.querySelector("#zoneText"),
   densityText: document.querySelector("#densityText"),
   saveStatus: document.querySelector("#saveStatus"),
+  saveNow: document.querySelector("#saveNowBtn"),
   plotTitle: document.querySelector("#plotTitle"),
   plot: document.querySelector("#plot"),
   schedule: document.querySelector("#scheduleList"),
@@ -65,6 +73,7 @@ function activePlot() {
 }
 
 function savePlan() {
+  syncPlotFromControls();
   const plan = {
     zip: els.zip.value,
     activePlotId: state.activePlotId,
@@ -75,7 +84,7 @@ function savePlan() {
     }))
   };
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(plan));
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(plan));
     if (els.saveStatus) els.saveStatus.textContent = `Saved ${new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
   } catch (error) {
     if (els.saveStatus) els.saveStatus.textContent = "Not saved on this device";
@@ -84,7 +93,7 @@ function savePlan() {
 }
 
 function loadSavedPlan() {
-  const saved = localStorage.getItem(STORAGE_KEY);
+  const saved = window.localStorage.getItem(STORAGE_KEY);
   if (!saved) return;
 
   try {
@@ -113,16 +122,31 @@ function loadSavedPlan() {
   }
 }
 
+function saveCurrentPlan() {
+  savePlan();
+  render();
+}
+
 function climateForZip(zip) {
-  const prefix = Number(String(zip).slice(0, 2)) || 60;
-  if (prefix <= 9) return { zone: "9b", frost: "2026-02-12", heat: "long warm season" };
-  if (prefix <= 19) return { zone: "7a", frost: "2026-04-08", heat: "humid summers" };
-  if (prefix <= 39) return { zone: "8a", frost: "2026-03-25", heat: "long humid season" };
-  if (prefix <= 59) return { zone: "6b", frost: "2026-04-18", heat: "warm midsummer" };
-  if (prefix <= 69) return { zone: "6a", frost: "2026-04-24", heat: "shorter spring" };
-  if (prefix <= 79) return { zone: "7b", frost: "2026-03-30", heat: "hot dry spells" };
-  if (prefix <= 89) return { zone: "5b", frost: "2026-05-06", heat: "cool nights" };
-  return { zone: "9a", frost: "2026-03-02", heat: "dry summer edges" };
+  const digits = String(zip).replace(/\D/g, "");
+  if (USDA_ZONE_BY_ZIP[digits]) return USDA_ZONE_BY_ZIP[digits];
+
+  const prefix = Number(digits.slice(0, 2)) || 60;
+  const prefix3 = Number(digits.slice(0, 3)) || 600;
+
+  if (prefix3 >= 500 && prefix3 <= 528) return { zone: "5b", frost: "2026-05-02", heat: "upper Midwest season", source: "regional estimate" };
+  if (prefix3 >= 530 && prefix3 <= 549) return { zone: "5a", frost: "2026-05-08", heat: "cool upper Midwest season", source: "regional estimate" };
+  if (prefix3 >= 550 && prefix3 <= 567) return { zone: "4b", frost: "2026-05-14", heat: "short northern season", source: "regional estimate" };
+  if (prefix3 >= 570 && prefix3 <= 588) return { zone: "4b", frost: "2026-05-16", heat: "short prairie season", source: "regional estimate" };
+  if (prefix3 >= 590 && prefix3 <= 599) return { zone: "5a", frost: "2026-05-10", heat: "mountain plains season", source: "regional estimate" };
+  if (prefix <= 9) return { zone: "9b", frost: "2026-02-12", heat: "long warm season", source: "regional estimate" };
+  if (prefix <= 19) return { zone: "7a", frost: "2026-04-08", heat: "humid summers", source: "regional estimate" };
+  if (prefix <= 39) return { zone: "8a", frost: "2026-03-25", heat: "long humid season", source: "regional estimate" };
+  if (prefix <= 49) return { zone: "6b", frost: "2026-04-18", heat: "warm midsummer", source: "regional estimate" };
+  if (prefix <= 69) return { zone: "6a", frost: "2026-04-24", heat: "shorter spring", source: "regional estimate" };
+  if (prefix <= 79) return { zone: "7b", frost: "2026-03-30", heat: "hot dry spells", source: "regional estimate" };
+  if (prefix <= 89) return { zone: "5b", frost: "2026-05-06", heat: "cool nights", source: "regional estimate" };
+  return { zone: "9a", frost: "2026-03-02", heat: "dry summer edges", source: "regional estimate" };
 }
 
 function addDays(dateText, days) {
@@ -276,7 +300,7 @@ function render() {
   const density = used / Math.max(area, 1);
 
   els.plotTitle.textContent = `${plot.name}: ${plot.width} x ${plot.length} ft`;
-  els.zoneText.textContent = `Zone ${climate.zone} · Last frost ${formatDate(new Date(`${climate.frost}T12:00:00`))}`;
+  els.zoneText.textContent = `${climate.source === "USDA ZIP lookup" ? "USDA Zone" : "Est. Zone"} ${climate.zone} · Last frost ${formatDate(new Date(`${climate.frost}T12:00:00`))}`;
   els.densityText.textContent = density > 1.05 ? "Tight" : density > 0.72 ? "Productive" : "Comfortable";
   els.plot.style.aspectRatio = `${plot.width} / ${plot.length}`;
   els.plot.style.setProperty("--grid-x", `${100 / plot.width}%`);
@@ -492,6 +516,14 @@ els.addPlot.addEventListener("click", addPlot);
 els.shuffle.addEventListener("click", generateLayout);
 els.export.addEventListener("click", exportPlan);
 els.customForm.addEventListener("submit", addCustomPlant);
+els.plannerForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  saveCurrentPlan();
+});
+els.saveNow.addEventListener("click", saveCurrentPlan);
+[els.zip, els.width, els.length, els.goal].forEach((input) => {
+  input.addEventListener("blur", saveCurrentPlan);
+});
 window.addEventListener("resize", renderPlot);
 window.addEventListener("beforeunload", savePlan);
 document.addEventListener("visibilitychange", () => {
