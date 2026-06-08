@@ -11,8 +11,6 @@ const plantLibrary = [
   { id: "parsley", name: "Parsley", short: "Par", color: "#4e8c68", sun: "part", spacing: 1.0, start: -42, transplant: 7, harvest: 70, water: "steady", companions: ["tomato", "pepper"] }
 ];
 
-const STORAGE_KEY = "sol-garden-plan-v1";
-
 const state = {
   activePlotId: "plot-1",
   plots: [
@@ -47,7 +45,6 @@ const els = {
   plantCount: document.querySelector("#plantCount"),
   zoneText: document.querySelector("#zoneText"),
   densityText: document.querySelector("#densityText"),
-  saveStatus: document.querySelector("#saveStatus"),
   plotTitle: document.querySelector("#plotTitle"),
   plot: document.querySelector("#plot"),
   schedule: document.querySelector("#scheduleList"),
@@ -62,55 +59,6 @@ const els = {
 
 function activePlot() {
   return state.plots.find((plot) => plot.id === state.activePlotId);
-}
-
-function savePlan() {
-  const plan = {
-    zip: els.zip.value,
-    activePlotId: state.activePlotId,
-    plantLibrary,
-    plots: state.plots.map((plot) => ({
-      ...plot,
-      selected: [...plot.selected.entries()]
-    }))
-  };
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(plan));
-    if (els.saveStatus) els.saveStatus.textContent = `Saved ${new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
-  } catch (error) {
-    if (els.saveStatus) els.saveStatus.textContent = "Not saved on this device";
-    console.warn("SOL could not save this plan", error);
-  }
-}
-
-function loadSavedPlan() {
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if (!saved) return;
-
-  try {
-    const plan = JSON.parse(saved);
-    if (plan.zip) els.zip.value = plan.zip;
-    if (Array.isArray(plan.plantLibrary)) {
-      plantLibrary.splice(0, plantLibrary.length, ...plan.plantLibrary);
-    }
-    if (Array.isArray(plan.plots) && plan.plots.length) {
-      state.plots.splice(
-        0,
-        state.plots.length,
-        ...plan.plots.map((plot) => ({
-          ...plot,
-          selected: new Map(plot.selected || []),
-          placedPlants: Array.isArray(plot.placedPlants) ? plot.placedPlants : []
-        }))
-      );
-    }
-    if (plan.activePlotId && state.plots.some((plot) => plot.id === plan.activePlotId)) {
-      state.activePlotId = plan.activePlotId;
-    }
-  } catch (error) {
-    if (els.saveStatus) els.saveStatus.textContent = "Saved plan could not load";
-    console.warn("SOL could not load the saved plan", error);
-  }
 }
 
 function climateForZip(zip) {
@@ -287,7 +235,6 @@ function render() {
   renderPlot();
   renderInsights(plot, density, climate);
   renderSchedule(plot, climate);
-  savePlan();
 }
 
 function renderPlot() {
@@ -406,7 +353,6 @@ function finishDrag() {
   activeDrag = null;
   const plot = activePlot();
   renderInsights(plot, calculateDensity(plot), climateForZip(els.zip.value));
-  savePlan();
 }
 
 function calculateDensity(plot) {
@@ -493,15 +439,9 @@ els.shuffle.addEventListener("click", generateLayout);
 els.export.addEventListener("click", exportPlan);
 els.customForm.addEventListener("submit", addCustomPlant);
 window.addEventListener("resize", renderPlot);
-window.addEventListener("beforeunload", savePlan);
-document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "hidden") savePlan();
-});
 
-loadSavedPlan();
 syncControlsFromPlot();
-if (activePlot().placedPlants.length) render();
-else generateLayout();
+generateLayout();
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
