@@ -138,3 +138,4 @@ module.exports = async function handler(request, response) {
     sendJson(response, 500, { error: error.message || "SOL AI could not answer right now." });
   }
 };
+
