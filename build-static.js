@@ -12,4 +12,4 @@ for (const entry of entries) {
   fs.cpSync(path.join(root, entry), path.join(dist, entry), { recursive: true });
 }
 
-console.log("Built SOL static site to dist/");
+console.log("Built CultivAIte static site to dist/");

@@ -1,12 +1,12 @@
 {
-  "name": "SOL: Sustainable, Organized Layout",
-  "short_name": "SOL",
-  "description": "Plan sustainable garden layouts by ZIP code, plot size, and plant choices.",
+  "name": "CultivAIte",
+  "short_name": "CultivAIte",
+  "description": "Plan AI-assisted, sustainable garden layouts by ZIP code, plot size, and plant choices.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#f8faf4",
-  "theme_color": "#246843",
+  "background_color": "#F1EDE6",
+  "theme_color": "#36411B",
   "orientation": "portrait-primary",
   "categories": ["lifestyle", "productivity", "utilities"],
   "icons": [

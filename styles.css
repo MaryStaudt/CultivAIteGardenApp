@@ -1,18 +1,30 @@
+@import url("https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,400;0,700;1,400&family=Nunito:wght@500;600;700;800;900&display=swap");
+
 :root {
   color-scheme: light;
-  --ink: #17201b;
-  --muted: #66736a;
-  --line: #d7ded4;
-  --paper: #f8faf4;
-  --panel: #ffffff;
-  --soil: #8b6f55;
-  --soil-dark: #6f5845;
-  --leaf: #3f8d5a;
-  --leaf-dark: #246843;
-  --flower: #d87ca0;
-  --gold: #e5aa3f;
-  --water: #4c8fad;
-  --shadow: 0 18px 60px rgba(41, 50, 39, 0.12);
+  --ivory: #f1ede6;
+  --terracotta: #8d4737;
+  --olive: #6d7e43;
+  --sky: #8dbbd0;
+  --moss: #36411b;
+  --earth: #5a4435;
+  --ink: #36411b;
+  --muted: #6d665d;
+  --line: #d9d0c3;
+  --paper: #f1ede6;
+  --panel: #fffaf1;
+  --soil: #8d4737;
+  --soil-dark: #5a4435;
+  --leaf: #6d7e43;
+  --leaf-dark: #36411b;
+  --flower: #8d4737;
+  --gold: #8d4737;
+  --water: #8dbbd0;
+  --shadow: 0 18px 60px rgba(54, 65, 27, 0.14);
+  --font-logo: Nunito, Verdana, sans-serif;
+  --font-headline: Bitter, Georgia, serif;
+  --font-ui: Nunito, Verdana, sans-serif;
+  --font-body: Verdana, Geneva, sans-serif;
 }
 
 * {
@@ -23,20 +35,18 @@ body {
   margin: 0;
   min-height: 100vh;
   background:
-    linear-gradient(rgba(248, 250, 244, 0.86), rgba(248, 250, 244, 0.95)),
-    repeating-linear-gradient(90deg, rgba(63, 141, 90, 0.09) 0 1px, transparent 1px 86px),
-    repeating-linear-gradient(0deg, rgba(139, 111, 85, 0.08) 0 1px, transparent 1px 86px),
-    #f8faf4;
+    linear-gradient(rgba(241, 237, 230, 0.9), rgba(241, 237, 230, 0.96)),
+    repeating-linear-gradient(90deg, rgba(109, 126, 67, 0.08) 0 1px, transparent 1px 86px),
+    repeating-linear-gradient(0deg, rgba(141, 71, 55, 0.07) 0 1px, transparent 1px 86px),
+    var(--ivory);
   color: var(--ink);
-  font-family:
-    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-    sans-serif;
+  font-family: var(--font-body);
 }
 
 button,
 input,
 select {
-  font: inherit;
+  font-family: var(--font-ui);
 }
 
 button {
@@ -59,7 +69,37 @@ button {
 }
 
 .app-header h1 {
-  font-size: 2.25rem;
+  font-family: var(--font-logo);
+  font-size: clamp(2rem, 4vw, 3.4rem);
+  font-weight: 900;
+}
+
+.brand-lockup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-lockup.compact {
+  gap: 10px;
+}
+
+.brand-mark {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 54px;
+  height: 54px;
+  border: 2px solid rgba(54, 65, 27, 0.2);
+  border-radius: 50%;
+  background:
+    linear-gradient(135deg, rgba(141, 71, 55, 0.96) 0 48%, rgba(109, 126, 67, 0.96) 48% 100%);
+  color: var(--ivory);
+  font-family: var(--font-logo);
+  font-size: 0.92rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  box-shadow: 0 10px 24px rgba(54, 65, 27, 0.16);
 }
 
 .app-nav {
@@ -73,7 +113,7 @@ button {
   min-height: 40px;
   padding: 0 14px;
   border-radius: 8px;
-  background: #fff;
+  background: var(--panel);
   color: var(--ink);
   border: 1px solid var(--line);
   font-weight: 900;
@@ -81,9 +121,9 @@ button {
 
 .nav-btn.active,
 .primary-action {
-  background: var(--leaf-dark);
+  background: var(--moss);
   color: #fff;
-  border-color: var(--leaf-dark);
+  border-color: var(--moss);
 }
 
 .page {
@@ -111,7 +151,7 @@ button {
 .page-panel {
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 250, 241, 0.94);
   box-shadow: var(--shadow);
 }
 
@@ -125,6 +165,8 @@ button {
 
 .home-hero h2 {
   max-width: 720px;
+  font-family: var(--font-headline);
+  font-weight: 700;
   font-size: clamp(2rem, 5vw, 4.5rem);
   line-height: 0.98;
 }
@@ -133,6 +175,7 @@ button {
   max-width: 620px;
   margin: 0;
   color: var(--muted);
+  font-family: var(--font-body);
   font-size: 1.05rem;
   line-height: 1.5;
 }
@@ -153,7 +196,7 @@ button {
   padding: 16px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #f3f7ee;
+  background: rgba(109, 126, 67, 0.12);
 }
 
 .page-panel {
@@ -174,7 +217,7 @@ button {
 .planner-panel,
 .schedule-panel,
 .garden-stage {
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 250, 241, 0.94);
   border: 1px solid var(--line);
   box-shadow: var(--shadow);
 }
@@ -223,11 +266,15 @@ h2 {
 }
 
 h1 {
+  font-family: var(--font-logo);
+  font-weight: 900;
   font-size: clamp(2rem, 4vw, 3rem);
   line-height: 0.95;
 }
 
 h2 {
+  font-family: var(--font-headline);
+  font-weight: 700;
   font-size: 1.05rem;
 }
 
@@ -263,7 +310,7 @@ select {
   height: 42px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fff;
+  background: #fffaf1;
   color: var(--ink);
   padding: 0 12px;
   outline: none;
@@ -272,7 +319,7 @@ select {
 input:focus,
 select:focus {
   border-color: var(--leaf);
-  box-shadow: 0 0 0 3px rgba(63, 141, 90, 0.18);
+  box-shadow: 0 0 0 3px rgba(141, 71, 55, 0.16);
 }
 
 .unit-input {
@@ -281,7 +328,7 @@ select:focus {
   align-items: center;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fff;
+  background: #fffaf1;
   overflow: hidden;
 }
 
@@ -303,7 +350,7 @@ select:focus {
   padding: 14px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #f3f7ee;
+  background: rgba(109, 126, 67, 0.12);
 }
 
 .context-card strong {
@@ -358,14 +405,14 @@ select:focus {
   padding: 9px 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fff;
+  background: #fffaf1;
   color: var(--ink);
   text-align: left;
 }
 
 .plot-manager .plot-tab.active {
-  border-color: rgba(63, 141, 90, 0.68);
-  background: #eef7ef;
+  border-color: rgba(109, 126, 67, 0.68);
+  background: rgba(109, 126, 67, 0.14);
 }
 
 .plot-manager .plot-tab span {
@@ -401,12 +448,12 @@ select:focus {
   padding: 8px 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: white;
+  background: #fffaf1;
 }
 
 .plant-option.active {
-  border-color: rgba(63, 141, 90, 0.68);
-  background: #eef7ef;
+  border-color: rgba(109, 126, 67, 0.68);
+  background: rgba(109, 126, 67, 0.13);
 }
 
 .plant-badge {
@@ -630,7 +677,7 @@ select:focus {
   z-index: 4;
   outline: 4px solid rgba(255, 255, 255, 0.92);
   box-shadow:
-    0 0 0 5px rgba(36, 104, 67, 0.72),
+    0 0 0 5px rgba(54, 65, 27, 0.72),
     0 15px 32px rgba(24, 18, 14, 0.3);
 }
 
@@ -653,7 +700,7 @@ select:focus {
   padding: 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fff;
+  background: var(--panel);
 }
 
 .plant-editor strong {
@@ -663,8 +710,8 @@ select:focus {
 }
 
 .plant-editor.active {
-  border-color: rgba(63, 141, 90, 0.58);
-  background: #f3f7ee;
+  border-color: rgba(109, 126, 67, 0.58);
+  background: rgba(109, 126, 67, 0.12);
 }
 
 .nudge-pad {
@@ -709,16 +756,16 @@ select:focus {
   padding: 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fff;
+  background: var(--panel);
 }
 
 .insight.warning {
-  border-color: rgba(195, 75, 63, 0.36);
-  background: #fff7f3;
+  border-color: rgba(141, 71, 55, 0.36);
+  background: rgba(141, 71, 55, 0.08);
 }
 
 .insight.good {
-  border-color: rgba(63, 141, 90, 0.28);
+  border-color: rgba(109, 126, 67, 0.28);
 }
 
 .insight strong,
@@ -771,7 +818,7 @@ select:focus {
   padding: 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fff;
+  background: var(--panel);
 }
 
 .schedule-item.complete {
@@ -817,7 +864,7 @@ select:focus {
   padding: 14px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fff;
+  background: var(--panel);
 }
 
 .month-card h3 {
@@ -845,7 +892,7 @@ select:focus {
   padding: 14px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #f3f7ee;
+  background: rgba(109, 126, 67, 0.1);
 }
 
 .chat-message {
@@ -854,13 +901,13 @@ select:focus {
   max-width: 760px;
   padding: 12px;
   border-radius: 8px;
-  background: #fff;
+  background: var(--panel);
   border: 1px solid var(--line);
 }
 
 .user-message {
   justify-self: end;
-  background: #e9f3eb;
+  background: rgba(141, 71, 55, 0.1);
 }
 
 .chat-message span {
@@ -1024,3 +1071,4 @@ select:focus {
     left: 2px;
   }
 }
+  font-family: var(--font-ui);

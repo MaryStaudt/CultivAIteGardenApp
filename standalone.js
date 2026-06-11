@@ -1,19 +1,20 @@
 const plantLibrary = [
-  { id: "tomato", name: "Tomato", short: "Tom", color: "#d55445", sun: "full", spacing: 2.2, start: -42, transplant: 8, harvest: 74, water: "steady", companions: ["basil", "marigold"] },
-  { id: "basil", name: "Basil", short: "Bas", color: "#3f8d5a", sun: "full", spacing: 1.2, start: -28, transplant: 14, harvest: 52, water: "steady", companions: ["tomato", "pepper"] },
-  { id: "pepper", name: "Pepper", short: "Pep", color: "#c34b3f", sun: "full", spacing: 1.8, start: -56, transplant: 12, harvest: 82, water: "steady", companions: ["basil", "marigold"] },
-  { id: "lettuce", name: "Lettuce", short: "Let", color: "#75a857", sun: "part", spacing: 1.0, start: -21, transplant: -7, harvest: 37, water: "even", companions: ["carrot", "radish"] },
-  { id: "carrot", name: "Carrot", short: "Car", color: "#df8e32", sun: "full", spacing: 0.6, start: -14, transplant: 0, harvest: 70, water: "light", companions: ["lettuce", "radish"] },
-  { id: "cucumber", name: "Cucumber", short: "Cuc", color: "#4f9b55", sun: "full", spacing: 2.5, start: -21, transplant: 14, harvest: 62, water: "deep", companions: ["radish", "marigold"] },
-  { id: "zucchini", name: "Zucchini", short: "Zuc", color: "#477b45", sun: "full", spacing: 3.0, start: -14, transplant: 14, harvest: 58, water: "deep", companions: ["marigold"] },
-  { id: "marigold", name: "Marigold", short: "Mar", color: "#d8942f", sun: "full", spacing: 1.0, start: -35, transplant: 14, harvest: 54, water: "light", companions: ["tomato", "pepper", "cucumber"] },
-  { id: "spinach", name: "Spinach", short: "Spi", color: "#32784f", sun: "part", spacing: 0.8, start: -28, transplant: -14, harvest: 40, water: "even", companions: ["lettuce", "carrot"] },
-  { id: "parsley", name: "Parsley", short: "Par", color: "#4e8c68", sun: "part", spacing: 1.0, start: -42, transplant: 7, harvest: 70, water: "steady", companions: ["tomato", "pepper"] },
-  { id: "radish", name: "Radish", short: "Rad", color: "#c74762", sun: "full", spacing: 0.5, start: -21, transplant: -7, harvest: 25, water: "even", companions: ["lettuce", "carrot", "cucumber"] },
-  { id: "bean", name: "Bush Bean", short: "Bean", color: "#5e9f53", sun: "full", spacing: 0.8, start: 7, transplant: 14, harvest: 56, water: "even", companions: ["carrot", "cucumber", "marigold"] }
+  { id: "tomato", name: "Tomato", short: "Tom", color: "#8d4737", sun: "full", spacing: 2.2, start: -42, transplant: 8, harvest: 74, water: "steady", companions: ["basil", "marigold"] },
+  { id: "basil", name: "Basil", short: "Bas", color: "#6d7e43", sun: "full", spacing: 1.2, start: -28, transplant: 14, harvest: 52, water: "steady", companions: ["tomato", "pepper"] },
+  { id: "pepper", name: "Pepper", short: "Pep", color: "#5a4435", sun: "full", spacing: 1.8, start: -56, transplant: 12, harvest: 82, water: "steady", companions: ["basil", "marigold"] },
+  { id: "lettuce", name: "Lettuce", short: "Let", color: "#8dbbd0", sun: "part", spacing: 1.0, start: -21, transplant: -7, harvest: 37, water: "even", companions: ["carrot", "radish"] },
+  { id: "carrot", name: "Carrot", short: "Car", color: "#8d4737", sun: "full", spacing: 0.6, start: -14, transplant: 0, harvest: 70, water: "light", companions: ["lettuce", "radish"] },
+  { id: "cucumber", name: "Cucumber", short: "Cuc", color: "#6d7e43", sun: "full", spacing: 2.5, start: -21, transplant: 14, harvest: 62, water: "deep", companions: ["radish", "marigold"] },
+  { id: "zucchini", name: "Zucchini", short: "Zuc", color: "#36411b", sun: "full", spacing: 3.0, start: -14, transplant: 14, harvest: 58, water: "deep", companions: ["marigold"] },
+  { id: "marigold", name: "Marigold", short: "Mar", color: "#8d4737", sun: "full", spacing: 1.0, start: -35, transplant: 14, harvest: 54, water: "light", companions: ["tomato", "pepper", "cucumber"] },
+  { id: "spinach", name: "Spinach", short: "Spi", color: "#6d7e43", sun: "part", spacing: 0.8, start: -28, transplant: -14, harvest: 40, water: "even", companions: ["lettuce", "carrot"] },
+  { id: "parsley", name: "Parsley", short: "Par", color: "#36411b", sun: "part", spacing: 1.0, start: -42, transplant: 7, harvest: 70, water: "steady", companions: ["tomato", "pepper"] },
+  { id: "radish", name: "Radish", short: "Rad", color: "#8d4737", sun: "full", spacing: 0.5, start: -21, transplant: -7, harvest: 25, water: "even", companions: ["lettuce", "carrot", "cucumber"] },
+  { id: "bean", name: "Bush Bean", short: "Bean", color: "#6d7e43", sun: "full", spacing: 0.8, start: 7, transplant: 14, harvest: 56, water: "even", companions: ["carrot", "cucumber", "marigold"] }
 ];
 
-const STORAGE_KEY = "sol-garden-plan-v1";
+const STORAGE_KEY = "cultivaite-garden-plan-v1";
+const LEGACY_STORAGE_KEY = "sol-garden-plan-v1";
 const USDA_ZONE_BY_ZIP = {
   "50161": { zone: "5b", frost: "2026-05-02", heat: "upper Midwest season", source: "USDA ZIP lookup" },
   "60614": { zone: "6a", frost: "2026-04-24", heat: "shorter spring", source: "USDA ZIP lookup" },
@@ -146,12 +147,12 @@ function savePlan() {
     setSaveStatus(`Autosaved ${new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`);
   } catch (error) {
     setSaveStatus("Not saved on this device");
-    console.warn("SOL could not save this plan", error);
+    console.warn("CultivAIte could not save this plan", error);
   }
 }
 
 function loadSavedPlan() {
-  const saved = window.localStorage.getItem(STORAGE_KEY);
+  const saved = window.localStorage.getItem(STORAGE_KEY) || window.localStorage.getItem(LEGACY_STORAGE_KEY);
   if (!saved) return;
 
   try {
@@ -179,7 +180,7 @@ function loadSavedPlan() {
     if (Array.isArray(plan.completedTasks)) state.completedTasks = plan.completedTasks;
   } catch (error) {
     if (els.saveStatus) els.saveStatus.textContent = "Saved plan could not load";
-    console.warn("SOL could not load the saved plan", error);
+    console.warn("CultivAIte could not load the saved plan", error);
   }
 }
 
@@ -282,7 +283,7 @@ function assessGarden(plot, climate = climateForZip(els.zip.value), extension = 
   else if (density > 0.78) wins.push("This is a productive density, but keep pruning and airflow on your weekly task list.");
   else wins.push("Spacing is comfortable enough for watering, pruning, and weeding.");
 
-  if (plot.width > 4 && plot.width < 7) warnings.push("Beds wider than 4 ft are hard to reach across. SOL is keeping a center access path visible.");
+  if (plot.width > 4 && plot.width < 7) warnings.push("Beds wider than 4 ft are hard to reach across. CultivAIte is keeping a center access path visible.");
   if (plot.width >= 7) wins.push("A center path is reserved so both sides of the bed stay reachable.");
 
   Object.entries(families).forEach(([family, count]) => {
@@ -750,7 +751,7 @@ function renderAskIntro() {
   const extension = extensionForZip(els.zip.value);
   els.chatWindow.innerHTML = `
     <div class="chat-message sol-message">
-      <strong>SOL</strong>
+      <strong>CultivAIte</strong>
       <span>I can answer using this garden plan, USDA zone ${climate.zone}, and ${extension.source} style guidance. If the AI backend is connected, I will use it automatically.</span>
     </div>
   `;
@@ -822,7 +823,7 @@ function exportPlan() {
   const climate = climateForZip(els.zip.value);
   const assessment = assessGarden(activePlot(), climate, extensionForZip(els.zip.value));
   const lines = [
-    "SOL plan",
+    "CultivAIte plan",
     `ZIP: ${els.zip.value}`,
     `Zone: ${climate.zone}`,
     `Guidance: ${assessment.extension.source}`,
@@ -843,7 +844,7 @@ function exportPlan() {
   const blob = new Blob([lines.join("\n")], { type: "text/plain" });
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
-  link.download = "sol-plan.txt";
+  link.download = "cultivaite-plan.txt";
   link.click();
   URL.revokeObjectURL(link.href);
 }
@@ -882,7 +883,7 @@ function answerGardenQuestion(question) {
   if (lower.includes("spacing") || lower.includes("crowd") || lower.includes("too many")) {
     return assessment.density > 1.05
       ? `This plan is crowded. I would remove a few plants or choose compact spacing. The biggest risk is reduced airflow, harder weeding, and more pest pressure.`
-      : `Your spacing looks workable. SOL estimates this bed as ${assessment.density > 0.78 ? "productive but a little tight" : "comfortable"} for the selected plants.`;
+      : `Your spacing looks workable. CultivAIte estimates this bed as ${assessment.density > 0.78 ? "productive but a little tight" : "comfortable"} for the selected plants.`;
   }
   if (lower.includes("companion") || lower.includes("together")) {
     return companions.length
@@ -911,10 +912,10 @@ function answerGardenQuestion(question) {
     const suggestion = coolSeason
       ? "For that season profile, good starter choices are lettuce, spinach, radish, carrot, parsley, bush beans after frost, and warm-season crops like tomato or pepper only after the soil warms."
       : "For that warmer season profile, focus on herbs, beans, peppers, tomatoes, cucumbers, and heat-tolerant greens while managing water carefully.";
-    return `${zipNote}For ZIP ${questionZip}, SOL is using USDA zone ${climate.zone}. ${suggestion} Based on your current plot, keep heavy feeders composted and leave the center access path open.`;
+    return `${zipNote}For ZIP ${questionZip}, CultivAIte is using USDA zone ${climate.zone}. ${suggestion} Based on your current plot, keep heavy feeders composted and leave the center access path open.`;
   }
   if (lower.includes("zone") || lower.includes("zip")) {
-    return `${zipNote}For ZIP ${questionZip || "your area"}, SOL is using USDA zone ${climate.zone} and a last-frost estimate of ${formatDate(new Date(`${climate.frost}T12:00:00`))}. ${extension.source} guidance says: ${extension.note}`;
+    return `${zipNote}For ZIP ${questionZip || "your area"}, CultivAIte is using USDA zone ${climate.zone} and a last-frost estimate of ${formatDate(new Date(`${climate.frost}T12:00:00`))}. ${extension.source} guidance says: ${extension.note}`;
   }
   return `${zipNote}Based on this ${plot.width} x ${plot.length} ft plot, USDA zone ${climate.zone}, and ${extension.source} guidance, I would keep the access path clear, place tall crops toward the back, group similar water needs, use companion flowers or herbs near fruiting crops, and watch this first: ${assessment.warnings[0] || assessment.wins[0]}`;
 }
@@ -962,7 +963,7 @@ async function askSol(event) {
 
   els.chatWindow.insertAdjacentHTML("beforeend", `
     <div class="chat-message user-message"><strong>You</strong><span>${escapeHtml(question)}</span></div>
-    <div class="chat-message sol-message thinking-message" id="thinkingMessage"><strong>SOL</strong><span>Thinking through your garden plan...</span></div>
+    <div class="chat-message sol-message thinking-message" id="thinkingMessage"><strong>CultivAIte</strong><span>Thinking through your garden plan...</span></div>
   `);
   els.askInput.value = "";
   els.chatWindow.scrollTop = els.chatWindow.scrollHeight;
@@ -979,8 +980,8 @@ async function askSol(event) {
     answer = data.answer;
   } catch (error) {
     const reason = error.message ? ` Reason: ${error.message}` : "";
-    answer = `${answerGardenQuestion(question)}\n\nAI backend note: I used SOL's built-in garden logic because the live AI connection is not available yet.${reason}`;
-    console.warn("SOL AI fallback used", error);
+    answer = `${answerGardenQuestion(question)}\n\nAI backend note: I used CultivAIte's built-in garden logic because the live AI connection is not available yet.${reason}`;
+    console.warn("CultivAIte AI fallback used", error);
   }
 
   const thinking = document.querySelector("#thinkingMessage");
@@ -1011,7 +1012,7 @@ function addCustomPlant(event) {
     id,
     name,
     short: name.slice(0, 3),
-    color: "#4c8fad",
+    color: "#8dbbd0",
     sun: els.customSun.value,
     spacing: Number(els.customSpacing.value) || 1.5,
     start: -21,
@@ -1094,7 +1095,7 @@ else generateLayout();
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("/sw.js").catch((error) => {
-      console.warn("SOL service worker registration failed", error);
+      console.warn("CultivAIte service worker registration failed", error);
     });
   });
 }

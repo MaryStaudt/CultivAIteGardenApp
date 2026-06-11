@@ -1,4 +1,4 @@
-const CACHE_NAME = "sol-pwa-v13";
+const CACHE_NAME = "cultivaite-pwa-v1";
 const APP_SHELL = [
   "/",
   "/index.html",
