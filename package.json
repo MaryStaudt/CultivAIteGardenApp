@@ -4,6 +4,6 @@
   "private": true,
   "description": "CultivAIte AI-assisted garden planner.",
   "scripts": {
-    "build": "mkdir -p dist && cp -R index.html manifest.webmanifest sw.js icons dist/"
+    "build": "mkdir -p dist && cp index.html dist/index.html"
   }
 }
