@@ -637,6 +637,14 @@ select:focus {
   box-shadow: 0 15px 32px rgba(24, 18, 14, 0.34);
 }
 
+.plant-chip.selected {
+  z-index: 4;
+  outline: 4px solid rgba(255, 255, 255, 0.92);
+  box-shadow:
+    0 0 0 5px rgba(36, 104, 67, 0.72),
+    0 15px 32px rgba(24, 18, 14, 0.3);
+}
+
 .plant-chip small {
   position: relative;
   z-index: 1;
@@ -646,6 +654,59 @@ select:focus {
   text-overflow: ellipsis;
   white-space: nowrap;
   text-shadow: 0 1px 1px rgba(0, 0, 0, 0.24);
+}
+
+.plant-editor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.plant-editor strong {
+  display: block;
+  font-size: 0.9rem;
+  line-height: 1.3;
+}
+
+.plant-editor.active {
+  border-color: rgba(63, 141, 90, 0.58);
+  background: #f3f7ee;
+}
+
+.nudge-pad {
+  display: grid;
+  grid-template-columns: repeat(4, 42px);
+  gap: 6px;
+}
+
+.nudge-pad button,
+.editor-actions button {
+  min-height: 42px;
+  border-radius: 8px;
+  background: var(--ink);
+  color: #fff;
+  font-weight: 900;
+}
+
+.nudge-pad button:disabled,
+.editor-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.38;
+}
+
+.editor-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(70px, auto));
+  gap: 6px;
+}
+
+.editor-actions button {
+  padding: 0 12px;
 }
 
 .insight-strip {
@@ -873,6 +934,25 @@ select:focus {
   .app-header {
     align-items: flex-start;
     flex-direction: column;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .app-header h1 {
+    font-size: 2.8rem;
+  }
+
+  .app-nav {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 6px;
+    width: 100%;
+  }
+
+  .nav-btn {
+    min-height: 44px;
+    padding: 0 6px;
+    font-size: 0.78rem;
   }
 
   .home-hero {
@@ -909,7 +989,50 @@ select:focus {
   }
 
   .garden-stage {
-    min-height: 560px;
+    gap: 10px;
+    min-height: auto;
+  }
+
+  .plot-wrap {
+    min-height: 420px;
+    padding: 34px 18px 18px 34px;
+    overflow: auto;
+  }
+
+  .plot {
+    width: min(100%, 520px);
+    min-width: min(86vw, 420px);
+  }
+
+  .plant-chip {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .plant-editor {
+    position: sticky;
+    bottom: 8px;
+    z-index: 8;
+    grid-template-columns: 1fr;
+    box-shadow: 0 14px 34px rgba(41, 50, 39, 0.16);
+  }
+
+  .nudge-pad {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .nudge-pad button,
+  .editor-actions button {
+    min-height: 48px;
+    font-size: 1rem;
+  }
+
+  .editor-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dimension-length {
+    left: 2px;
   }
 }
 
@@ -1082,6 +1205,22 @@ select:focus {
           <div class="access-path horizontal" aria-hidden="true"></div>
           <div class="plot" id="plot" aria-label="Interactive garden plot"></div>
         </div>
+        <div class="plant-editor" id="plantEditor" aria-live="polite">
+          <div>
+            <span class="context-label">Plant editor</span>
+            <strong id="selectedPlantText">Tap a plant to edit it</strong>
+          </div>
+          <div class="nudge-pad" aria-label="Move selected plant">
+            <button type="button" data-nudge="up" aria-label="Move selected plant up">↑</button>
+            <button type="button" data-nudge="left" aria-label="Move selected plant left">←</button>
+            <button type="button" data-nudge="down" aria-label="Move selected plant down">↓</button>
+            <button type="button" data-nudge="right" aria-label="Move selected plant right">→</button>
+          </div>
+          <div class="editor-actions">
+            <button id="centerPlantBtn" type="button">Center</button>
+            <button id="removePlantBtn" type="button">Remove</button>
+          </div>
+        </div>
         <div class="insight-strip" id="insightStrip"></div>
       </section>
 
@@ -1197,6 +1336,7 @@ const COMPANION_WARNINGS = [
 const state = {
   activePlotId: "plot-1",
   activePageId: "homePage",
+  selectedPlantUid: "",
   completedTasks: [],
   plots: [
     {
@@ -1236,6 +1376,10 @@ const els = {
   saveNow: document.querySelector("#saveNowBtn"),
   plotTitle: document.querySelector("#plotTitle"),
   plot: document.querySelector("#plot"),
+  plantEditor: document.querySelector("#plantEditor"),
+  selectedPlantText: document.querySelector("#selectedPlantText"),
+  centerPlant: document.querySelector("#centerPlantBtn"),
+  removePlant: document.querySelector("#removePlantBtn"),
   schedule: document.querySelector("#scheduleList"),
   insight: document.querySelector("#insightStrip"),
   shuffle: document.querySelector("#shuffleBtn"),
@@ -1270,6 +1414,7 @@ function savePlan() {
     zip: els.zip.value,
     activePlotId: state.activePlotId,
     activePageId: state.activePageId,
+    selectedPlantUid: state.selectedPlantUid,
     completedTasks: state.completedTasks,
     plantLibrary,
     plots: state.plots.map((plot) => ({
@@ -1311,6 +1456,7 @@ function loadSavedPlan() {
       state.activePlotId = plan.activePlotId;
     }
     if (plan.activePageId) state.activePageId = plan.activePageId;
+    if (plan.selectedPlantUid) state.selectedPlantUid = plan.selectedPlantUid;
     if (Array.isArray(plan.completedTasks)) state.completedTasks = plan.completedTasks;
   } catch (error) {
     if (els.saveStatus) els.saveStatus.textContent = "Saved plan could not load";
@@ -1508,6 +1654,18 @@ function renderPlotTabs() {
   });
 }
 
+function selectedPlacedPlant() {
+  return activePlot().placedPlants.find((plant) => plant.uid === state.selectedPlantUid);
+}
+
+function selectPlacedPlant(uid) {
+  const plot = activePlot();
+  state.selectedPlantUid = plot.placedPlants.some((plant) => plant.uid === uid) ? uid : "";
+  renderPlot();
+  renderPlantEditor();
+  queueAutoSave();
+}
+
 function renderPlantPicker() {
   const plot = activePlot();
   els.plantList.innerHTML = "";
@@ -1645,6 +1803,7 @@ function render() {
   renderPlotTabs();
   renderPlantPicker();
   renderPlot();
+  renderPlantEditor();
   renderInsights(plot, assessment);
   renderSchedule(plot, climate);
   renderPages();
@@ -1655,14 +1814,18 @@ function renderPlot() {
   const plot = activePlot();
   els.plot.innerHTML = "";
   if (!plot.placedPlants.length) {
+    state.selectedPlantUid = "";
     els.plot.innerHTML = `<div class="empty-state">Choose plants for this plot</div>`;
     return;
+  }
+  if (!plot.placedPlants.some((plant) => plant.uid === state.selectedPlantUid)) {
+    state.selectedPlantUid = "";
   }
 
   plot.placedPlants.forEach((plant) => {
     const chip = document.createElement("button");
     chip.type = "button";
-    chip.className = "plant-chip";
+    chip.className = `plant-chip${plant.uid === state.selectedPlantUid ? " selected" : ""}`;
     chip.dataset.uid = plant.uid;
     chip.style.left = `${plant.x * 100}%`;
     chip.style.top = `${plant.y * 100}%`;
@@ -1672,8 +1835,70 @@ function renderPlot() {
     chip.innerHTML = `<small>${plant.short}</small>`;
     chip.addEventListener("pointerdown", startDrag);
     chip.addEventListener("mousedown", startMouseDrag);
+    chip.addEventListener("click", () => selectPlacedPlant(plant.uid));
     els.plot.append(chip);
   });
+}
+
+function renderPlantEditor() {
+  const plant = selectedPlacedPlant();
+  const disabled = !plant;
+  if (els.selectedPlantText) {
+    els.selectedPlantText.textContent = plant
+      ? `${plant.name} · ${(plant.x * activePlot().width).toFixed(1)} ft across, ${(plant.y * activePlot().length).toFixed(1)} ft down`
+      : "Tap a plant to edit it";
+  }
+  if (els.plantEditor) {
+    els.plantEditor.classList.toggle("active", Boolean(plant));
+    els.plantEditor.querySelectorAll("button").forEach((button) => {
+      button.disabled = disabled;
+    });
+  }
+}
+
+function nudgeSelectedPlant(direction) {
+  const plant = selectedPlacedPlant();
+  if (!plant) return;
+  const plot = activePlot();
+  const stepX = clamp(1 / Math.max(plot.width, 1), 0.025, 0.08);
+  const stepY = clamp(1 / Math.max(plot.length, 1), 0.025, 0.08);
+  if (direction === "left") plant.x = clamp(plant.x - stepX, 0.04, 0.96);
+  if (direction === "right") plant.x = clamp(plant.x + stepX, 0.04, 0.96);
+  if (direction === "up") plant.y = clamp(plant.y - stepY, 0.04, 0.96);
+  if (direction === "down") plant.y = clamp(plant.y + stepY, 0.04, 0.96);
+  updateSelectedPlantDisplay();
+}
+
+function centerSelectedPlant() {
+  const plant = selectedPlacedPlant();
+  if (!plant) return;
+  plant.x = 0.5;
+  plant.y = 0.5;
+  updateSelectedPlantDisplay();
+}
+
+function removeSelectedPlant() {
+  const plant = selectedPlacedPlant();
+  if (!plant) return;
+  const plot = activePlot();
+  const current = plot.selected.get(plant.id) || 0;
+  if (current > 1) plot.selected.set(plant.id, current - 1);
+  else plot.selected.delete(plant.id);
+  state.selectedPlantUid = "";
+  generateLayout();
+}
+
+function updateSelectedPlantDisplay() {
+  const plant = selectedPlacedPlant();
+  if (!plant) return;
+  const chip = els.plot.querySelector(`[data-uid="${plant.uid}"]`);
+  if (chip) {
+    chip.style.left = `${plant.x * 100}%`;
+    chip.style.top = `${plant.y * 100}%`;
+  }
+  renderPlantEditor();
+  renderInsights(activePlot(), assessGarden(activePlot(), climateForZip(els.zip.value), extensionForZip(els.zip.value)));
+  queueAutoSave();
 }
 
 function renderInsights(plot, assessment = assessGarden(plot)) {
@@ -1815,6 +2040,8 @@ function renderAskIntro() {
 function startDrag(event) {
   event.preventDefault();
   const uid = event.currentTarget.dataset.uid;
+  state.selectedPlantUid = uid;
+  renderPlantEditor();
   activeDrag = { uid, el: event.currentTarget };
   activeDrag.el.classList.add("dragging");
   activeDrag.el.setPointerCapture(event.pointerId);
@@ -1826,6 +2053,8 @@ function startMouseDrag(event) {
   if (activeDrag) return;
   event.preventDefault();
   const uid = event.currentTarget.dataset.uid;
+  state.selectedPlantUid = uid;
+  renderPlantEditor();
   activeDrag = { uid, el: event.currentTarget };
   activeDrag.el.classList.add("dragging");
   document.addEventListener("mousemove", dragPlant);
@@ -1860,6 +2089,7 @@ function finishDrag() {
   activeDrag = null;
   const plot = activePlot();
   renderInsights(plot, assessGarden(plot, climateForZip(els.zip.value), extensionForZip(els.zip.value)));
+  renderPlantEditor();
   savePlan();
 }
 
@@ -2080,6 +2310,7 @@ els.plotTabs.addEventListener("click", (event) => {
   const button = event.target.closest(".plot-tab");
   if (!button) return;
   state.activePlotId = button.dataset.plotId;
+  state.selectedPlantUid = "";
   syncControlsFromPlot();
   render();
 });
@@ -2119,6 +2350,12 @@ els.plannerForm.addEventListener("submit", (event) => {
 els.saveNow.addEventListener("click", saveCurrentPlan);
 els.markTasks.addEventListener("click", markNextTaskDone);
 els.askForm.addEventListener("submit", askSol);
+els.plantEditor.addEventListener("click", (event) => {
+  const nudgeButton = event.target.closest("[data-nudge]");
+  if (nudgeButton) nudgeSelectedPlant(nudgeButton.dataset.nudge);
+});
+els.centerPlant.addEventListener("click", centerSelectedPlant);
+els.removePlant.addEventListener("click", removeSelectedPlant);
 [els.zip, els.width, els.length, els.goal].forEach((input) => {
   input.addEventListener("blur", saveCurrentPlan);
   input.addEventListener("input", queueAutoSave);
