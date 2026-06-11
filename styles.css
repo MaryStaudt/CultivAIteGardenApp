@@ -85,21 +85,19 @@ button {
 }
 
 .brand-mark {
-  display: grid;
-  place-items: center;
   flex: 0 0 auto;
-  width: 54px;
-  height: 54px;
-  border: 2px solid rgba(54, 65, 27, 0.2);
+  width: 64px;
+  height: 64px;
+  border: 2px solid rgba(54, 65, 27, 0.16);
   border-radius: 50%;
-  background:
-    linear-gradient(135deg, rgba(141, 71, 55, 0.96) 0 48%, rgba(109, 126, 67, 0.96) 48% 100%);
-  color: var(--ivory);
-  font-family: var(--font-logo);
-  font-size: 0.92rem;
-  font-weight: 900;
-  letter-spacing: 0.05em;
+  object-fit: cover;
+  background: var(--ivory);
   box-shadow: 0 10px 24px rgba(54, 65, 27, 0.16);
+}
+
+.brand-lockup.compact .brand-mark {
+  width: 52px;
+  height: 52px;
 }
 
 .app-nav {
