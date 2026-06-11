@@ -4,8 +4,6 @@
   "private": true,
   "description": "CultivAIte AI-assisted garden planner.",
   "scripts": {
-    "start": "python3 -m http.server 5173",
-    "build": "node scripts/build-static.js",
     "check": "node --check src/standalone.js && node --check api/ask.js && node --check sw.js"
   }
 }
