@@ -1,5 +1,11 @@
 {
-  "name": "sol-web",
-  "version": "0.1.0",
-  "private": true
+  "name": "sol-garden",
+  "version": "0.2.0",
+  "private": true,
+  "description": "SOL: Sustainable, Organized Layout garden planner.",
+  "scripts": {
+    "start": "python3 -m http.server 5173",
+    "build": "node scripts/build-static.js",
+    "check": "node --check src/standalone.js && node --check api/ask.js && node --check sw.js"
+  }
 }
