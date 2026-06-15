@@ -2,7 +2,7 @@
   "name": "cultivaite-garden",
   "version": "0.2.0",
   "private": true,
-  "description": "CultivAIte AI-assisted garden planner.",
+  "description": "CultivAIte AI-powered garden planner.",
   "scripts": {
     "build": "mkdir -p dist && cp index.html dist/index.html"
   }
