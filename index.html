@@ -1585,6 +1585,10 @@ function getPlanSnapshot() {
   };
 }
 
+function cleanForCloudSave(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
 function applyPlanSnapshot(plan) {
   if (!plan) return;
   if (plan.zip) els.zip.value = plan.zip;
@@ -1724,7 +1728,7 @@ async function saveCloudPlan() {
   if (!ref) return;
   try {
     await cloudState.dbApi.setDoc(ref, {
-      plan: getPlanSnapshot(),
+      plan: cleanForCloudSave(getPlanSnapshot()),
       updatedAt: cloudState.dbApi.serverTimestamp()
     });
     setCloudStatus(`Cloud saved ${new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`);
