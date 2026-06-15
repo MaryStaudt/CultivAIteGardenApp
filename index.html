@@ -1729,7 +1729,7 @@ async function saveCloudPlan() {
     });
     setCloudStatus(`Cloud saved ${new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`);
   } catch (error) {
-    setCloudStatus("Cloud save failed. Local saving is still active.");
+    setCloudStatus(`Cloud save failed: ${error.code || error.message || "Unknown Firebase error"}. Local saving is still active.`);
     console.warn("CultivAIte cloud save failed", error);
   }
 }
@@ -1758,7 +1758,7 @@ async function loadCloudPlan() {
       setCloudStatus(`Cloud plan loaded for ${cloudState.user.email || "your account"}.`);
     }
   } catch (error) {
-    setCloudStatus("Cloud plan could not load. Local saving is still active.");
+    setCloudStatus(`Cloud plan could not load: ${error.code || error.message || "Unknown Firebase error"}. Local saving is still active.`);
     console.warn("CultivAIte cloud plan could not load", error);
   }
 }
