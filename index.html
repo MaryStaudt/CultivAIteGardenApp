@@ -812,7 +812,7 @@ select:focus {
 
 .plant-editor {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) minmax(150px, 190px) auto auto;
   align-items: center;
   gap: 12px;
   padding: 12px;
@@ -830,6 +830,20 @@ select:focus {
 .plant-editor.active {
   border-color: rgba(83, 99, 63, 0.58);
   background: rgba(83, 99, 63, 0.12);
+}
+
+.planted-date-field {
+  display: grid;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.planted-date-field input {
+  min-height: 42px;
+  padding: 0 10px;
 }
 
 .nudge-pad {
@@ -967,14 +981,141 @@ select:focus {
   line-height: 1.35;
 }
 
+.task-group-label {
+  list-style: none;
+  grid-column: 1 / -1;
+  margin: 6px 0 -2px;
+  color: var(--moss-green);
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.schedule-item.quiet {
+  opacity: 0.72;
+}
+
 .page-list {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .calendar-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--line);
+}
+
+.calendar-controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.calendar-controls button {
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: 8px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--soil-brown);
+  font-weight: 900;
+}
+
+.calendar-title {
+  margin: -4px 0 12px;
+  color: var(--soil-brown);
+  font-family: "Bitter", Georgia, serif;
+  font-size: 1.35rem;
+  font-weight: 800;
+}
+
+.calendar-weekday {
+  min-height: 34px;
+  display: grid;
+  place-items: center;
+  background: rgba(83, 99, 63, 0.16);
+  color: var(--moss-green);
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.calendar-day {
+  min-height: 132px;
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 8px;
+  background: rgba(255, 250, 243, 0.92);
+}
+
+.calendar-day.outside {
+  background: rgba(244, 239, 228, 0.58);
+  color: rgba(58, 48, 40, 0.46);
+}
+
+.calendar-day.today {
+  box-shadow: inset 0 0 0 2px var(--harvest-gold);
+}
+
+.calendar-day-number {
+  color: var(--soil-brown);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.calendar-events {
+  display: grid;
+  gap: 5px;
+}
+
+.calendar-event {
+  display: grid;
+  gap: 2px;
+  padding: 6px;
+  border-left: 3px solid var(--moss-green);
+  border-radius: 6px;
+  background: rgba(83, 99, 63, 0.1);
+}
+
+.calendar-event strong {
+  font-size: 0.72rem;
+  line-height: 1.2;
+}
+
+.calendar-event span {
+  color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1.25;
+}
+
+.calendar-event.water {
+  border-left-color: var(--sage);
+}
+
+.calendar-event.soil {
+  border-left-color: var(--clay);
+}
+
+.calendar-event.pest {
+  border-left-color: var(--harvest-gold);
+}
+
+.calendar-event.harvest {
+  border-left-color: var(--leaf-dark);
+}
+
+.calendar-more {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
 }
 
 .month-card {
@@ -1069,9 +1210,13 @@ select:focus {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .calendar-grid,
   .page-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .calendar-grid {
+    grid-template-columns: repeat(7, minmax(92px, 1fr));
+    overflow-x: auto;
   }
 }
 
@@ -1128,10 +1273,22 @@ select:focus {
   .context-card,
   .insight-strip,
   .schedule-list,
-  .calendar-grid,
   .page-list,
   .ask-form {
     grid-template-columns: 1fr;
+  }
+
+  .calendar-grid {
+    grid-template-columns: repeat(7, minmax(92px, 1fr));
+    overflow-x: auto;
+  }
+
+  .calendar-controls {
+    justify-content: flex-start;
+  }
+
+  .calendar-day {
+    min-height: 118px;
   }
 
   .toolbar {
@@ -1395,6 +1552,10 @@ select:focus {
             <span class="context-label">Plant editor</span>
             <strong id="selectedPlantText">Tap a plant to edit it</strong>
           </div>
+          <label class="planted-date-field">
+            Planted on
+            <input id="plantedDateInput" type="date" />
+          </label>
           <div class="nudge-pad" aria-label="Move selected plant">
             <button type="button" data-nudge="up" aria-label="Move selected plant up">↑</button>
             <button type="button" data-nudge="left" aria-label="Move selected plant left">←</button>
@@ -1442,7 +1603,13 @@ select:focus {
               <p class="eyebrow">Season view</p>
               <h2>Calendar</h2>
             </div>
+            <div class="calendar-controls">
+              <button id="calendarPrevBtn" type="button">Previous</button>
+              <button id="calendarTodayBtn" type="button">Today</button>
+              <button id="calendarNextBtn" type="button">Next</button>
+            </div>
           </div>
+          <div class="calendar-title" id="calendarTitle">Month Year</div>
           <div class="calendar-grid" id="calendarGrid"></div>
         </section>
       </section>
@@ -1575,6 +1742,8 @@ const state = {
   activePageId: "homePage",
   selectedPlantUid: "",
   completedTasks: [],
+  calendarMonth: new Date().getMonth(),
+  calendarYear: new Date().getFullYear(),
   plots: [
     {
       id: "plot-1",
@@ -1589,6 +1758,7 @@ const state = {
         ["carrot", 12],
         ["marigold", 4]
       ]),
+      plantedDates: {},
       placedPlants: []
     }
   ]
@@ -1626,6 +1796,7 @@ const els = {
   plot: document.querySelector("#plot"),
   plantEditor: document.querySelector("#plantEditor"),
   selectedPlantText: document.querySelector("#selectedPlantText"),
+  plantedDate: document.querySelector("#plantedDateInput"),
   centerPlant: document.querySelector("#centerPlantBtn"),
   removePlant: document.querySelector("#removePlantBtn"),
   schedule: document.querySelector("#scheduleList"),
@@ -1646,6 +1817,10 @@ const els = {
   taskPageList: document.querySelector("#taskPageList"),
   markTasks: document.querySelector("#markTasksBtn"),
   calendarGrid: document.querySelector("#calendarGrid"),
+  calendarTitle: document.querySelector("#calendarTitle"),
+  calendarPrev: document.querySelector("#calendarPrevBtn"),
+  calendarToday: document.querySelector("#calendarTodayBtn"),
+  calendarNext: document.querySelector("#calendarNextBtn"),
   askForm: document.querySelector("#askForm"),
   askInput: document.querySelector("#askInput"),
   chatWindow: document.querySelector("#chatWindow"),
@@ -1673,6 +1848,8 @@ function getPlanSnapshot() {
     activePageId: state.activePageId,
     selectedPlantUid: state.selectedPlantUid,
     completedTasks: state.completedTasks,
+    calendarMonth: state.calendarMonth,
+    calendarYear: state.calendarYear,
     plantLibrary,
     plots: state.plots.map((plot) => ({
       ...plot,
@@ -1706,6 +1883,7 @@ function applyPlanSnapshot(plan) {
       ...plan.plots.map((plot) => ({
         ...plot,
         selected: new Map(plot.selected || []),
+        plantedDates: plot.plantedDates || {},
         placedPlants: Array.isArray(plot.placedPlants) ? plot.placedPlants : []
       }))
     );
@@ -1716,6 +1894,8 @@ function applyPlanSnapshot(plan) {
   if (plan.activePageId) state.activePageId = plan.activePageId;
   if (plan.selectedPlantUid) state.selectedPlantUid = plan.selectedPlantUid;
   if (Array.isArray(plan.completedTasks)) state.completedTasks = plan.completedTasks;
+  if (Number.isInteger(plan.calendarMonth)) state.calendarMonth = plan.calendarMonth;
+  if (Number.isInteger(plan.calendarYear)) state.calendarYear = plan.calendarYear;
 }
 
 function savePlan() {
@@ -1919,6 +2099,18 @@ function formatDate(date) {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+function isoDate(date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function dateFromIso(dateText) {
+  return dateText ? new Date(`${dateText}T12:00:00`) : null;
+}
+
+function plantedDateForPlant(plot, plant) {
+  return dateFromIso(plot.plantedDates?.[plant.id]);
+}
+
 function selectedPlantObjects(plot = activePlot()) {
   return [...plot.selected.entries()]
     .filter(([, qty]) => qty > 0)
@@ -2031,6 +2223,7 @@ function addPlot() {
     length: 12,
     goal: "balanced",
     selected: new Map([["lettuce", 4], ["spinach", 4], ["parsley", 2]]),
+    plantedDates: {},
     placedPlants: []
   };
   state.plots.push(plot);
@@ -2265,6 +2458,10 @@ function renderPlantEditor() {
       ? `${plant.name} · ${(plant.x * activePlot().width).toFixed(1)} ft across, ${(plant.y * activePlot().length).toFixed(1)} ft down · ${plant.zone || careZoneForPlant(plant)}`
       : "Tap a plant to edit it";
   }
+  if (els.plantedDate) {
+    els.plantedDate.disabled = disabled;
+    els.plantedDate.value = plant ? activePlot().plantedDates?.[plant.id] || "" : "";
+  }
   if (els.plantEditor) {
     els.plantEditor.classList.toggle("active", Boolean(plant));
     els.plantEditor.querySelectorAll("button").forEach((button) => {
@@ -2318,6 +2515,19 @@ function updateSelectedPlantDisplay() {
   queueAutoSave();
 }
 
+function updateSelectedPlantDate() {
+  const plant = selectedPlacedPlant();
+  if (!plant || !els.plantedDate) return;
+  const plot = activePlot();
+  if (!plot.plantedDates) plot.plantedDates = {};
+  if (els.plantedDate.value) plot.plantedDates[plant.id] = els.plantedDate.value;
+  else delete plot.plantedDates[plant.id];
+  renderSchedule(plot, climateForZip(els.zip.value));
+  renderTaskPage();
+  renderCalendarPage();
+  queueAutoSave();
+}
+
 function renderInsights(plot, assessment = assessGarden(plot)) {
   const groups = selectedPlantObjects(plot);
   const companionCount = groups.filter((plant) => plant.companions.some((id) => plot.selected.has(id))).length;
@@ -2337,49 +2547,111 @@ function scheduleTasks(plot, climate) {
   const tasks = [];
   const extension = extensionForZip(els.zip.value);
   const assessment = assessGarden(plot, climate, extension);
+  const plants = selectedPlantObjects(plot);
   if (selectedPlantObjects(plot).length) {
     tasks.push({
       date: addDays(climate.frost, -45),
       title: "Prepare soil",
       copy: `Add compost and review soil needs before planting. ${assessment.heavyFeeders.length ? "This plot includes heavy feeders." : "This plot has moderate soil demand."}`,
-      key: `${plot.id}-soil-prep`
+      key: `${plot.id}-soil-prep`,
+      type: "soil"
     });
   }
-  selectedPlantObjects(plot).forEach((plant) => {
+  plants.forEach((plant) => {
     const timing = taskTimingForPlant(plant, extension);
-    tasks.push({
-      date: addDays(climate.frost, timing.start),
-      title: `Start ${plant.name}`,
-      copy: plant.start < -1 ? `Sow indoors or under cover using ${extension.region} season timing.` : "Direct sow once soil can be worked.",
-      key: `${plot.id}-${plant.id}-start`
-    });
-    tasks.push({
-      date: addDays(climate.frost, timing.transplant),
-      title: `Plant ${plant.name}`,
-      copy: `${plant.sun === "full" ? "Use the brightest band" : "Use a cooler part-sun band"} with ${plant.spacing} ft spacing. ${plant.family === "nightshade" || plant.family === "cucurbit" ? "Wait for warm soil." : ""}`,
-      key: `${plot.id}-${plant.id}-plant`
-    });
-    if (["nightshade", "cucurbit"].includes(plant.family)) {
+    const plantedDate = plantedDateForPlant(plot, plant);
+    const plantDate = plantedDate || addDays(climate.frost, timing.transplant);
+    if (plantedDate) {
       tasks.push({
-        date: addDays(climate.frost, timing.transplant + 21),
-        title: `Scout ${plant.name}`,
-        copy: `Check leaves, stems, and soil surface for early pest or disease pressure.`,
-        key: `${plot.id}-${plant.id}-scout`
+        date: plantedDate,
+        title: `${plant.name} planted`,
+        copy: `Logged as already planted. CultivAIte will schedule care from this date.`,
+        key: `${plot.id}-${plant.id}-logged-${isoDate(plantedDate)}`,
+        type: "planted"
+      });
+    } else {
+      tasks.push({
+        date: addDays(climate.frost, timing.start),
+        title: `Start ${plant.name}`,
+        copy: plant.start < -1 ? `Sow indoors or under cover using ${extension.region} season timing.` : "Direct sow once soil can be worked.",
+        key: `${plot.id}-${plant.id}-start`,
+        type: "planting"
+      });
+      tasks.push({
+        date: plantDate,
+        title: `Plant ${plant.name}`,
+        copy: `${plant.sun === "full" ? "Use the brightest band" : "Use a cooler part-sun band"} with ${plant.spacing} ft spacing. ${plant.family === "nightshade" || plant.family === "cucurbit" ? "Wait for warm soil." : ""}`,
+        key: `${plot.id}-${plant.id}-plant`,
+        type: "planting"
       });
     }
     tasks.push({
-      date: addDays(climate.frost, timing.harvest),
+      date: addDays(isoDate(plantDate), 3),
+      title: `Water check: ${plant.name}`,
+      copy: `Check soil moisture near ${plant.name}. ${plant.water === "deep" ? "Water slowly and deeply." : plant.water === "light" ? "Avoid overwatering." : "Keep moisture steady."}`,
+      key: `${plot.id}-${plant.id}-water-3`,
+      type: "water"
+    });
+    if (["root", "leaf", "brassica"].includes(plant.family) || ["leaf", "root"].includes(plant.cropType)) {
+      tasks.push({
+        date: addDays(isoDate(plantDate), 14),
+        title: `Thin and weed ${plant.name}`,
+        copy: `Thin crowded seedlings and weed while roots are small so the row stays easy to maintain.`,
+        key: `${plot.id}-${plant.id}-thin`,
+        type: "maintenance"
+      });
+    }
+    if (plant.feed === "heavy") {
+      tasks.push({
+        date: addDays(isoDate(plantDate), 21),
+        title: `Feed ${plant.name}`,
+        copy: `Add compost or balanced organic fertilizer around heavy feeders without burying stems.`,
+        key: `${plot.id}-${plant.id}-feed`,
+        type: "soil"
+      });
+    }
+    if (["nightshade", "cucurbit"].includes(plant.family)) {
+      tasks.push({
+        date: addDays(isoDate(plantDate), 21),
+        title: `Scout ${plant.name}`,
+        copy: `Check leaves, stems, and soil surface for early pest or disease pressure. Keep airflow open.`,
+        key: `${plot.id}-${plant.id}-scout`,
+        type: "pest"
+      });
+      tasks.push({
+        date: addDays(isoDate(plantDate), 35),
+        title: `Prune and support ${plant.name}`,
+        copy: plant.height === "wide" ? "Guide leaves away from access paths and prune only damaged leaves." : "Tie stems, prune crowded growth, and keep lower leaves off wet soil.",
+        key: `${plot.id}-${plant.id}-prune`,
+        type: "maintenance"
+      });
+    }
+    tasks.push({
+      date: plantedDate ? addDays(isoDate(plantDate), Math.max(21, plant.harvest - Math.max(timing.transplant, 0))) : addDays(climate.frost, timing.harvest),
       title: `Harvest ${plant.name}`,
       copy: `Check every few days and keep watering ${plant.water}.`,
-      key: `${plot.id}-${plant.id}-harvest`
+      key: `${plot.id}-${plant.id}-harvest`,
+      type: "harvest"
     });
   });
+  if (plants.length) {
+    [7, 28, 56, 84].forEach((days) => {
+      tasks.push({
+        date: addDays(climate.frost, days),
+        title: "Weekly garden walk",
+        copy: "Check watering, weeds, leaf damage, and whether paths are still easy to reach.",
+        key: `${plot.id}-weekly-walk-${days}`,
+        type: "maintenance"
+      });
+    });
+  }
   if (assessment.warnings.some((warning) => warning.toLowerCase().includes("rotate"))) {
     tasks.push({
       date: addDays(climate.frost, 130),
       title: "Plan crop rotation",
       copy: "Move repeated crop families to a different plot next season to protect soil health.",
-      key: `${plot.id}-rotation-plan`
+      key: `${plot.id}-rotation-plan`,
+      type: "soil"
     });
   }
 
@@ -2409,9 +2681,20 @@ function renderPages() {
 
 function renderTaskPage() {
   const plot = activePlot();
-  const tasks = scheduleTasks(plot, climateForZip(els.zip.value)).slice(0, 24);
+  const tasks = scheduleTasks(plot, climateForZip(els.zip.value)).slice(0, 42);
+  const today = new Date();
+  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 12);
+  const weekEnd = new Date(todayStart);
+  weekEnd.setDate(todayStart.getDate() + 7);
+  const groups = [
+    ["Today", tasks.filter((task) => isoDate(task.date) === isoDate(todayStart))],
+    ["This week", tasks.filter((task) => task.date > todayStart && task.date <= weekEnd)],
+    ["Later", tasks.filter((task) => task.date > weekEnd).slice(0, 18)]
+  ];
   els.taskPageList.innerHTML = tasks.length
-    ? tasks.map((task) => {
+    ? groups.map(([label, groupTasks]) => `
+      <li class="task-group-label">${label}</li>
+      ${groupTasks.length ? groupTasks.map((task) => {
       const complete = state.completedTasks.includes(task.key);
       return `
         <li class="schedule-item${complete ? " complete" : ""}">
@@ -2419,27 +2702,70 @@ function renderTaskPage() {
           <span class="schedule-copy"><strong>${task.title}</strong><span>${task.copy}</span></span>
         </li>
       `;
-    }).join("")
+      }).join("") : `<li class="schedule-item quiet"><time class="schedule-date">Clear</time><span class="schedule-copy"><strong>No tasks</strong><span>Nothing scheduled for this window.</span></span></li>`}
+    `).join("")
     : `<li class="schedule-item"><time class="schedule-date">Ready</time><span class="schedule-copy"><strong>No tasks yet</strong><span>Add plants on the Layout page to build your task list.</span></span></li>`;
 }
 
 function renderCalendarPage() {
   const tasks = scheduleTasks(activePlot(), climateForZip(els.zip.value));
-  const byMonth = tasks.reduce((months, task) => {
-    const month = task.date.toLocaleDateString("en-US", { month: "long" });
-    if (!months[month]) months[month] = [];
-    months[month].push(task);
-    return months;
-  }, {});
+  const monthStart = new Date(state.calendarYear, state.calendarMonth, 1, 12);
+  const monthEnd = new Date(state.calendarYear, state.calendarMonth + 1, 0, 12);
+  const firstCell = new Date(monthStart);
+  firstCell.setDate(monthStart.getDate() - monthStart.getDay());
+  const todayKey = isoDate(new Date());
+  const monthLabel = monthStart.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  if (els.calendarTitle) els.calendarTitle.textContent = monthLabel;
 
-  els.calendarGrid.innerHTML = Object.keys(byMonth).length
-    ? Object.entries(byMonth).map(([month, monthTasks]) => `
-      <section class="month-card">
-        <h3>${month}</h3>
-        ${monthTasks.slice(0, 6).map((task) => `<p><strong>${formatDate(task.date)}</strong> ${task.title}</p>`).join("")}
+  const days = [];
+  for (let index = 0; index < 42; index += 1) {
+    const date = new Date(firstCell);
+    date.setDate(firstCell.getDate() + index);
+    days.push(date);
+  }
+
+  const weekdayHeader = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+    .map((day) => `<div class="calendar-weekday">${day}</div>`)
+    .join("");
+  const dayCells = days.map((date) => {
+    const dateKey = isoDate(date);
+    const dayTasks = tasks.filter((task) => isoDate(task.date) === dateKey);
+    const outside = date < monthStart || date > monthEnd;
+    return `
+      <section class="calendar-day${outside ? " outside" : ""}${dateKey === todayKey ? " today" : ""}">
+        <div class="calendar-day-number">${date.getDate()}</div>
+        <div class="calendar-events">
+          ${dayTasks.slice(0, 3).map((task) => `
+            <article class="calendar-event ${task.type || "task"}">
+              <strong>${task.title}</strong>
+              <span>${task.copy}</span>
+            </article>
+          `).join("")}
+          ${dayTasks.length > 3 ? `<p class="calendar-more">+${dayTasks.length - 3} more</p>` : ""}
+        </div>
       </section>
-    `).join("")
+    `;
+  }).join("");
+
+  els.calendarGrid.innerHTML = tasks.length
+    ? `${weekdayHeader}${dayCells}`
     : `<section class="month-card"><h3>No dates yet</h3><p>Add plants to create a calendar.</p></section>`;
+}
+
+function moveCalendarMonth(offset) {
+  const next = new Date(state.calendarYear, state.calendarMonth + offset, 1, 12);
+  state.calendarMonth = next.getMonth();
+  state.calendarYear = next.getFullYear();
+  renderCalendarPage();
+  queueAutoSave();
+}
+
+function jumpCalendarToToday() {
+  const today = new Date();
+  state.calendarMonth = today.getMonth();
+  state.calendarYear = today.getFullYear();
+  renderCalendarPage();
+  queueAutoSave();
 }
 
 function renderAskIntro() {
@@ -2808,6 +3134,9 @@ if (els.signOut) {
     setCloudStatus("Signed out. Local device save is still active.");
   });
 }
+if (els.calendarPrev) els.calendarPrev.addEventListener("click", () => moveCalendarMonth(-1));
+if (els.calendarNext) els.calendarNext.addEventListener("click", () => moveCalendarMonth(1));
+if (els.calendarToday) els.calendarToday.addEventListener("click", jumpCalendarToToday);
 els.plannerForm.addEventListener("submit", (event) => {
   event.preventDefault();
   saveCurrentPlan();
@@ -2815,6 +3144,7 @@ els.plannerForm.addEventListener("submit", (event) => {
 els.saveNow.addEventListener("click", saveCurrentPlan);
 els.markTasks.addEventListener("click", markNextTaskDone);
 els.askForm.addEventListener("submit", askSol);
+if (els.plantedDate) els.plantedDate.addEventListener("change", updateSelectedPlantDate);
 els.plantEditor.addEventListener("click", (event) => {
   const nudgeButton = event.target.closest("[data-nudge]");
   if (nudgeButton) nudgeSelectedPlant(nudgeButton.dataset.nudge);
