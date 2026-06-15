@@ -367,7 +367,7 @@ select:focus {
 
 .context-card {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
   gap: 10px;
   padding: 14px;
   border: 1px solid var(--line);
@@ -375,10 +375,141 @@ select:focus {
   background: rgba(83, 99, 63, 0.12);
 }
 
+.context-card > div {
+  min-width: 0;
+}
+
 .context-card strong {
   display: block;
   font-size: 0.92rem;
   line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.context-card .context-label {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.onboarding-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(58, 48, 40, 0.38);
+  backdrop-filter: blur(5px);
+}
+
+.onboarding-panel.active {
+  display: flex;
+}
+
+.onboarding-card {
+  width: min(760px, 100%);
+  max-height: min(720px, 92vh);
+  overflow: auto;
+  display: grid;
+  gap: 18px;
+  padding: 24px;
+  border: 1px solid rgba(83, 99, 63, 0.22);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: 0 24px 80px rgba(58, 48, 40, 0.24);
+}
+
+.onboarding-card h2 {
+  margin: 0 0 8px;
+  max-width: 620px;
+  color: var(--soil-brown);
+  font-family: "Bitter", Georgia, serif;
+  font-size: clamp(1.8rem, 4vw, 3rem);
+  line-height: 1.04;
+}
+
+.onboarding-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.onboarding-form {
+  display: grid;
+  gap: 14px;
+}
+
+.onboarding-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.starter-plants {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.starter-plants legend {
+  padding: 0 6px;
+  color: var(--soil-brown);
+  font-weight: 900;
+}
+
+.starter-plants label,
+.onboarding-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  color: var(--soil-brown);
+  font-weight: 800;
+}
+
+.starter-plants input,
+.onboarding-check input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--moss-green);
+}
+
+.onboarding-date-panel {
+  display: none;
+}
+
+.onboarding-date-panel.active {
+  display: grid;
+}
+
+.onboarding-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.onboarding-actions button {
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 8px;
+  font-weight: 900;
+}
+
+.onboarding-actions button[type="button"] {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--soil-brown);
+}
+
+.onboarding-actions button[type="submit"] {
+  background: var(--moss-green);
+  color: #fff;
 }
 
 .cloud-card {
@@ -705,12 +836,13 @@ select:focus {
   place-items: center;
   min-height: 24px;
   padding: 0 9px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.9);
-  color: var(--soil-dark);
+  border-radius: 999px;
+  background: rgba(244, 239, 228, 0.82);
+  color: var(--soil-brown);
   font-size: 0.76rem;
   font-weight: 900;
   pointer-events: none;
+  box-shadow: 0 4px 14px rgba(58, 48, 40, 0.12);
 }
 
 .dimension-width {
@@ -730,8 +862,8 @@ select:focus {
   position: absolute;
   z-index: 2;
   border-radius: 999px;
-  background: rgba(248, 250, 244, 0.28);
-  outline: 1px dashed rgba(255, 255, 255, 0.58);
+  background: transparent;
+  outline: 1px dashed rgba(244, 239, 228, 0.42);
   pointer-events: none;
 }
 
@@ -1210,6 +1342,10 @@ select:focus {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .context-card {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .page-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1275,6 +1411,15 @@ select:focus {
   .schedule-list,
   .page-list,
   .ask-form {
+    grid-template-columns: 1fr;
+  }
+
+  .onboarding-card {
+    padding: 18px;
+  }
+
+  .onboarding-row,
+  .starter-plants {
     grid-template-columns: 1fr;
   }
 
@@ -1370,6 +1515,57 @@ select:focus {
           <button class="nav-btn" type="button" data-page="askPage">Ask</button>
         </nav>
       </header>
+
+      <section class="onboarding-panel" id="onboardingPanel" aria-label="CultivAIte setup">
+        <div class="onboarding-card">
+          <div>
+            <p class="eyebrow">Start your garden</p>
+            <h2>Let CultivAIte build your first plan.</h2>
+            <p>Enter your garden basics, choose a few plants, and add planted dates if your season is already underway.</p>
+          </div>
+          <form class="onboarding-form" id="onboardingForm">
+            <label>
+              ZIP code
+              <input id="onboardZip" inputmode="numeric" maxlength="5" placeholder="50161" />
+            </label>
+            <div class="onboarding-row">
+              <label>
+                Plot width
+                <input id="onboardWidth" type="number" min="2" max="60" value="12" />
+              </label>
+              <label>
+                Plot length
+                <input id="onboardLength" type="number" min="2" max="80" value="18" />
+              </label>
+            </div>
+            <fieldset class="starter-plants">
+              <legend>Choose starter plants</legend>
+              <label><input type="checkbox" value="tomato" checked /> Tomato</label>
+              <label><input type="checkbox" value="basil" checked /> Basil</label>
+              <label><input type="checkbox" value="lettuce" checked /> Lettuce</label>
+              <label><input type="checkbox" value="carrot" checked /> Carrot</label>
+              <label><input type="checkbox" value="marigold" checked /> Marigold</label>
+              <label><input type="checkbox" value="pepper" /> Pepper</label>
+              <label><input type="checkbox" value="cucumber" /> Cucumber</label>
+              <label><input type="checkbox" value="kale" /> Kale</label>
+            </fieldset>
+            <label class="onboarding-check">
+              <input id="onboardAlreadyPlanted" type="checkbox" />
+              I already planted these
+            </label>
+            <div class="onboarding-date-panel" id="onboardDatePanel">
+              <label>
+                Planted date
+                <input id="onboardPlantedDate" type="date" />
+              </label>
+            </div>
+            <div class="onboarding-actions">
+              <button type="button" id="skipOnboardingBtn">Skip for now</button>
+              <button type="submit">Generate my garden</button>
+            </div>
+          </form>
+        </div>
+      </section>
 
       <section class="page active" id="homePage">
         <div class="home-grid">
@@ -1742,6 +1938,7 @@ const state = {
   activePageId: "homePage",
   selectedPlantUid: "",
   completedTasks: [],
+  onboardingComplete: false,
   calendarMonth: new Date().getMonth(),
   calendarYear: new Date().getFullYear(),
   plots: [
@@ -1833,7 +2030,16 @@ const els = {
   createAccount: document.querySelector("#createAccountBtn"),
   signIn: document.querySelector("#signInBtn"),
   syncCloud: document.querySelector("#syncCloudBtn"),
-  signOut: document.querySelector("#signOutBtn")
+  signOut: document.querySelector("#signOutBtn"),
+  onboardingPanel: document.querySelector("#onboardingPanel"),
+  onboardingForm: document.querySelector("#onboardingForm"),
+  onboardZip: document.querySelector("#onboardZip"),
+  onboardWidth: document.querySelector("#onboardWidth"),
+  onboardLength: document.querySelector("#onboardLength"),
+  onboardAlreadyPlanted: document.querySelector("#onboardAlreadyPlanted"),
+  onboardDatePanel: document.querySelector("#onboardDatePanel"),
+  onboardPlantedDate: document.querySelector("#onboardPlantedDate"),
+  skipOnboarding: document.querySelector("#skipOnboardingBtn")
 };
 
 function activePlot() {
@@ -1848,6 +2054,7 @@ function getPlanSnapshot() {
     activePageId: state.activePageId,
     selectedPlantUid: state.selectedPlantUid,
     completedTasks: state.completedTasks,
+    onboardingComplete: state.onboardingComplete,
     calendarMonth: state.calendarMonth,
     calendarYear: state.calendarYear,
     plantLibrary,
@@ -1894,6 +2101,7 @@ function applyPlanSnapshot(plan) {
   if (plan.activePageId) state.activePageId = plan.activePageId;
   if (plan.selectedPlantUid) state.selectedPlantUid = plan.selectedPlantUid;
   if (Array.isArray(plan.completedTasks)) state.completedTasks = plan.completedTasks;
+  state.onboardingComplete = typeof plan.onboardingComplete === "boolean" ? plan.onboardingComplete : true;
   if (Number.isInteger(plan.calendarMonth)) state.calendarMonth = plan.calendarMonth;
   if (Number.isInteger(plan.calendarYear)) state.calendarYear = plan.calendarYear;
 }
@@ -1926,6 +2134,65 @@ function loadSavedPlan() {
 function saveCurrentPlan() {
   savePlan();
   render();
+}
+
+function showOnboardingIfNeeded() {
+  if (!els.onboardingPanel) return;
+  if (state.onboardingComplete) {
+    els.onboardingPanel.classList.remove("active");
+    return;
+  }
+  if (els.onboardZip) els.onboardZip.value = els.zip.value || "60614";
+  if (els.onboardWidth) els.onboardWidth.value = activePlot().width || 12;
+  if (els.onboardLength) els.onboardLength.value = activePlot().length || 18;
+  els.onboardingPanel.classList.add("active");
+}
+
+function closeOnboarding() {
+  state.onboardingComplete = true;
+  if (els.onboardingPanel) els.onboardingPanel.classList.remove("active");
+  saveCurrentPlan();
+}
+
+function selectedOnboardingPlants() {
+  if (!els.onboardingForm) return ["tomato", "basil", "lettuce", "carrot", "marigold"];
+  return [...els.onboardingForm.querySelectorAll(".starter-plants input:checked")].map((input) => input.value);
+}
+
+function applyOnboarding(event) {
+  event.preventDefault();
+  const plot = activePlot();
+  const selectedIds = selectedOnboardingPlants();
+  const plantedDate = els.onboardAlreadyPlanted?.checked ? els.onboardPlantedDate?.value : "";
+  els.zip.value = (els.onboardZip.value || "60614").trim();
+  plot.width = clamp(Number(els.onboardWidth.value) || 12, 2, 60);
+  plot.length = clamp(Number(els.onboardLength.value) || 18, 2, 80);
+  plot.goal = "balanced";
+  plot.selected = new Map(selectedIds.map((id) => [id, defaultStarterQty(id)]));
+  plot.plantedDates = {};
+  if (plantedDate) selectedIds.forEach((id) => {
+    plot.plantedDates[id] = plantedDate;
+  });
+  state.onboardingComplete = true;
+  state.activePageId = "layoutPage";
+  state.selectedPlantUid = "";
+  if (els.onboardingPanel) els.onboardingPanel.classList.remove("active");
+  syncControlsFromPlot();
+  generateLayout();
+}
+
+function defaultStarterQty(id) {
+  if (["carrot", "radish", "onion", "garlic", "arugula"].includes(id)) return 12;
+  if (["lettuce", "spinach", "kale"].includes(id)) return 6;
+  if (["basil", "parsley", "cilantro", "dill"].includes(id)) return 3;
+  if (["marigold", "calendula", "nasturtium"].includes(id)) return 4;
+  if (["cucumber", "zucchini", "summer-squash", "pumpkin"].includes(id)) return 2;
+  return 4;
+}
+
+function toggleOnboardingDatePanel() {
+  if (!els.onboardDatePanel || !els.onboardAlreadyPlanted) return;
+  els.onboardDatePanel.classList.toggle("active", els.onboardAlreadyPlanted.checked);
 }
 
 function setSaveStatus(message) {
@@ -3137,6 +3404,9 @@ if (els.signOut) {
 if (els.calendarPrev) els.calendarPrev.addEventListener("click", () => moveCalendarMonth(-1));
 if (els.calendarNext) els.calendarNext.addEventListener("click", () => moveCalendarMonth(1));
 if (els.calendarToday) els.calendarToday.addEventListener("click", jumpCalendarToToday);
+if (els.onboardingForm) els.onboardingForm.addEventListener("submit", applyOnboarding);
+if (els.skipOnboarding) els.skipOnboarding.addEventListener("click", closeOnboarding);
+if (els.onboardAlreadyPlanted) els.onboardAlreadyPlanted.addEventListener("change", toggleOnboardingDatePanel);
 els.plannerForm.addEventListener("submit", (event) => {
   event.preventDefault();
   saveCurrentPlan();
@@ -3168,6 +3438,7 @@ if (activePlot().placedPlants.length) render();
 else generateLayout();
 updateCloudButtons();
 initCloudSave();
+showOnboardingIfNeeded();
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
