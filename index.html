@@ -91,6 +91,21 @@ button {
   letter-spacing: 0;
 }
 
+.header-save-status {
+  display: inline-grid;
+  place-items: center;
+  min-height: 34px;
+  margin-left: auto;
+  padding: 0 12px;
+  border: 1px solid rgba(83, 99, 63, 0.22);
+  border-radius: 999px;
+  background: rgba(244, 239, 228, 0.8);
+  color: var(--moss-green);
+  font-size: 0.76rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
 .brand-ai {
   color: var(--moss-green);
 }
@@ -365,6 +380,44 @@ select:focus {
   font-weight: 800;
 }
 
+.garden-manager {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+  padding: 14px;
+  border: 1px solid rgba(83, 99, 63, 0.24);
+  border-radius: 8px;
+  background: rgba(244, 239, 228, 0.78);
+}
+
+.garden-manager select {
+  margin-top: 5px;
+  min-height: 40px;
+}
+
+.garden-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.garden-actions button {
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--soil-brown);
+  font-weight: 900;
+}
+
+.garden-actions button:first-child {
+  background: var(--moss-green);
+  color: #fff;
+}
+
 .context-card {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
@@ -579,7 +632,8 @@ select:focus {
 }
 
 .cloud-card.is-signed-in #createAccountBtn,
-.cloud-card.is-signed-in #signInBtn {
+.cloud-card.is-signed-in #signInBtn,
+.cloud-card.is-signed-in #resetPasswordBtn {
   display: none;
 }
 
@@ -1407,6 +1461,7 @@ select:focus {
   .control-grid,
   .cloud-controls,
   .context-card,
+  .garden-manager,
   .insight-strip,
   .schedule-list,
   .page-list,
@@ -1507,6 +1562,7 @@ select:focus {
             <h1>Cultiv<span class="brand-ai">AI</span>te</h1>
           </div>
         </div>
+        <span class="header-save-status" id="headerSaveStatus">Ready</span>
         <nav class="app-nav" aria-label="CultivAIte pages">
           <button class="nav-btn active" type="button" data-page="homePage">Home</button>
           <button class="nav-btn" type="button" data-page="layoutPage">Layout</button>
@@ -1608,6 +1664,18 @@ select:focus {
           </button>
         </div>
 
+        <section class="garden-manager" aria-label="Saved gardens">
+          <div>
+            <span class="context-label">Garden</span>
+            <select id="gardenSelect" aria-label="Choose saved garden"></select>
+          </div>
+          <div class="garden-actions">
+            <button id="newGardenBtn" type="button">New</button>
+            <button id="renameGardenBtn" type="button">Rename</button>
+            <button id="deleteGardenBtn" type="button">Delete</button>
+          </div>
+        </section>
+
         <form class="control-grid" id="plannerForm">
           <label>
             ZIP code
@@ -1682,6 +1750,7 @@ select:focus {
             <div class="cloud-action-row">
               <button id="createAccountBtn" type="button">Create account</button>
               <button id="signInBtn" type="button">Sign in</button>
+              <button id="resetPasswordBtn" type="button">Reset password</button>
               <button id="syncCloudBtn" type="button">Sync now</button>
               <button id="signOutBtn" type="button">Sign out</button>
             </div>
@@ -1861,6 +1930,8 @@ const plantLibrary = [
 ];
 
 const STORAGE_KEY = "cultivaite-garden-plan-v1";
+const STORAGE_INDEX_KEY = "cultivaite-garden-index-v1";
+const ACTIVE_GARDEN_KEY = "cultivaite-active-garden-v1";
 const LEGACY_STORAGE_KEY = "sol-garden-plan-v1";
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyB4lRcXrCNUHzcJeyciR-HyxiFMtYFdyEQ",
@@ -1934,6 +2005,8 @@ const COMPANION_WARNINGS = [
 ];
 
 const state = {
+  activeGardenId: "garden-main",
+  gardens: [{ id: "garden-main", name: "2026 vegetable garden" }],
   activePlotId: "plot-1",
   activePageId: "homePage",
   selectedPlantUid: "",
@@ -1981,6 +2054,10 @@ const els = {
   width: document.querySelector("#widthInput"),
   length: document.querySelector("#lengthInput"),
   goal: document.querySelector("#goalInput"),
+  gardenSelect: document.querySelector("#gardenSelect"),
+  newGarden: document.querySelector("#newGardenBtn"),
+  renameGarden: document.querySelector("#renameGardenBtn"),
+  deleteGarden: document.querySelector("#deleteGardenBtn"),
   plotTabs: document.querySelector("#plotTabs"),
   addPlot: document.querySelector("#addPlotBtn"),
   plantList: document.querySelector("#plantList"),
@@ -2009,6 +2086,7 @@ const els = {
   homePlotText: document.querySelector("#homePlotText"),
   homeZoneText: document.querySelector("#homeZoneText"),
   homeSaveText: document.querySelector("#homeSaveText"),
+  headerSaveStatus: document.querySelector("#headerSaveStatus"),
   widthLabel: document.querySelector("#widthLabel"),
   lengthLabel: document.querySelector("#lengthLabel"),
   taskPageList: document.querySelector("#taskPageList"),
@@ -2029,6 +2107,7 @@ const els = {
   cloudPassword: document.querySelector("#cloudPassword"),
   createAccount: document.querySelector("#createAccountBtn"),
   signIn: document.querySelector("#signInBtn"),
+  resetPassword: document.querySelector("#resetPasswordBtn"),
   syncCloud: document.querySelector("#syncCloudBtn"),
   signOut: document.querySelector("#signOutBtn"),
   onboardingPanel: document.querySelector("#onboardingPanel"),
@@ -2049,6 +2128,8 @@ function activePlot() {
 function getPlanSnapshot() {
   syncPlotFromControls();
   return {
+    activeGardenId: state.activeGardenId,
+    gardens: state.gardens,
     zip: els.zip.value,
     activePlotId: state.activePlotId,
     activePageId: state.activePageId,
@@ -2073,8 +2154,21 @@ function planToCloudText() {
   return JSON.stringify(cleanForCloudSave(getPlanSnapshot()));
 }
 
+function gardenPlanKey(gardenId = state.activeGardenId) {
+  return `${STORAGE_KEY}:${gardenId}`;
+}
+
+function saveGardenIndex() {
+  window.localStorage.setItem(STORAGE_INDEX_KEY, JSON.stringify(state.gardens));
+  window.localStorage.setItem(ACTIVE_GARDEN_KEY, state.activeGardenId);
+}
+
 function applyPlanSnapshot(plan) {
   if (!plan) return;
+  if (Array.isArray(plan.gardens) && plan.gardens.length) {
+    state.gardens = plan.gardens;
+  }
+  if (plan.activeGardenId) state.activeGardenId = plan.activeGardenId;
   if (plan.zip) els.zip.value = plan.zip;
   if (Array.isArray(plan.plantLibrary)) {
     plan.plantLibrary
@@ -2109,6 +2203,8 @@ function applyPlanSnapshot(plan) {
 function savePlan() {
   const plan = getPlanSnapshot();
   try {
+    saveGardenIndex();
+    window.localStorage.setItem(gardenPlanKey(), JSON.stringify(plan));
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(plan));
     setSaveStatus(`Autosaved ${new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`);
     queueCloudSave();
@@ -2119,7 +2215,20 @@ function savePlan() {
 }
 
 function loadSavedPlan() {
-  const saved = window.localStorage.getItem(STORAGE_KEY) || window.localStorage.getItem(LEGACY_STORAGE_KEY);
+  const savedGardens = window.localStorage.getItem(STORAGE_INDEX_KEY);
+  const savedActiveGarden = window.localStorage.getItem(ACTIVE_GARDEN_KEY);
+  if (savedGardens) {
+    try {
+      const gardens = JSON.parse(savedGardens);
+      if (Array.isArray(gardens) && gardens.length) state.gardens = gardens;
+    } catch (error) {
+      console.warn("CultivAIte could not load the garden list", error);
+    }
+  }
+  if (savedActiveGarden && state.gardens.some((garden) => garden.id === savedActiveGarden)) {
+    state.activeGardenId = savedActiveGarden;
+  }
+  const saved = window.localStorage.getItem(gardenPlanKey()) || window.localStorage.getItem(STORAGE_KEY) || window.localStorage.getItem(LEGACY_STORAGE_KEY);
   if (!saved) return;
 
   try {
@@ -2198,6 +2307,7 @@ function toggleOnboardingDatePanel() {
 function setSaveStatus(message) {
   if (els.saveStatus) els.saveStatus.textContent = message;
   if (els.homeSaveText) els.homeSaveText.textContent = message;
+  if (els.headerSaveStatus) els.headerSaveStatus.textContent = message;
 }
 
 function queueAutoSave() {
@@ -2267,16 +2377,31 @@ function updateCloudButtons() {
     els.cloudAccountBadge.textContent = signedIn ? "Signed in" : configured ? "Ready" : "Local only";
     els.cloudAccountBadge.classList.toggle("is-signed-in", signedIn);
   }
-  [els.cloudEmail, els.cloudPassword, els.createAccount, els.signIn, els.syncCloud, els.signOut].forEach((item) => {
+  [els.cloudEmail, els.cloudPassword, els.createAccount, els.signIn, els.resetPassword, els.syncCloud, els.signOut].forEach((item) => {
     if (item) item.disabled = !configured || cloudState.loading;
   });
   if (els.syncCloud) els.syncCloud.disabled = !configured || cloudState.loading || !signedIn;
   if (els.signOut) els.signOut.disabled = !configured || cloudState.loading || !signedIn;
 }
 
-function cloudDocRef() {
+function cloudDocRef(gardenId = state.activeGardenId) {
   if (!cloudState.user || !cloudState.dbApi) return null;
-  return cloudState.dbApi.doc(cloudState.db, "users", cloudState.user.uid, "gardens", "current");
+  return cloudState.dbApi.doc(cloudState.db, "users", cloudState.user.uid, "gardens", gardenId);
+}
+
+function cloudIndexRef() {
+  if (!cloudState.user || !cloudState.dbApi) return null;
+  return cloudState.dbApi.doc(cloudState.db, "users", cloudState.user.uid, "gardens", "index");
+}
+
+async function saveCloudIndex() {
+  const ref = cloudIndexRef();
+  if (!ref) return;
+  await cloudState.dbApi.setDoc(ref, {
+    gardens: cleanForCloudSave(state.gardens),
+    activeGardenId: state.activeGardenId,
+    updatedAt: cloudState.dbApi.serverTimestamp()
+  });
 }
 
 async function saveCloudPlan() {
@@ -2284,6 +2409,7 @@ async function saveCloudPlan() {
   const ref = cloudDocRef();
   if (!ref) return;
   try {
+    await saveCloudIndex();
     await cloudState.dbApi.setDoc(ref, {
       planJson: planToCloudText(),
       updatedAt: cloudState.dbApi.serverTimestamp()
@@ -2303,22 +2429,44 @@ function queueCloudSave() {
 
 async function loadCloudPlan() {
   if (!cloudState.ready || !cloudState.user) return;
-  const ref = cloudDocRef();
-  if (!ref) return;
+  const indexRef = cloudIndexRef();
   try {
+    const indexSnapshot = indexRef ? await cloudState.dbApi.getDoc(indexRef) : null;
+    if (indexSnapshot?.exists()) {
+      const indexData = indexSnapshot.data();
+      if (Array.isArray(indexData.gardens) && indexData.gardens.length) {
+        state.gardens = indexData.gardens;
+      }
+      if (indexData.activeGardenId && state.gardens.some((garden) => garden.id === indexData.activeGardenId)) {
+        state.activeGardenId = indexData.activeGardenId;
+      }
+    }
+    let ref = cloudDocRef();
+    if (!ref) return;
     const saved = await cloudState.dbApi.getDoc(ref);
     if (!saved.exists()) {
-      await saveCloudPlan();
-      return;
+      const legacyRef = cloudDocRef("current");
+      const legacySaved = await cloudState.dbApi.getDoc(legacyRef);
+      if (!legacySaved.exists()) {
+        await saveCloudPlan();
+        return;
+      }
+      const legacyData = legacySaved.data();
+      const legacyPlan = legacyData?.planJson ? JSON.parse(legacyData.planJson) : legacyData?.plan;
+      if (legacyPlan) {
+        applyPlanSnapshot({ ...legacyPlan, activeGardenId: state.activeGardenId, gardens: state.gardens });
+      }
+    } else {
+      const data = saved.data();
+      const cloudPlan = data?.planJson ? JSON.parse(data.planJson) : data?.plan;
+      if (cloudPlan) {
+        applyPlanSnapshot({ ...cloudPlan, activeGardenId: state.activeGardenId, gardens: state.gardens });
+      }
     }
-    const data = saved.data();
-    const cloudPlan = data?.planJson ? JSON.parse(data.planJson) : data?.plan;
-    if (cloudPlan) {
-      applyPlanSnapshot(cloudPlan);
-      syncControlsFromPlot();
-      render();
-      setCloudStatus(`Cloud plan loaded for ${cloudState.user.email || "your account"}.`);
-    }
+    saveGardenIndex();
+    syncControlsFromPlot();
+    render();
+    setCloudStatus(`Cloud gardens loaded for ${cloudState.user.email || "your account"}.`);
   } catch (error) {
     setCloudStatus(`Cloud plan could not load: ${error.code || error.message || "Unknown Firebase error"}. Local saving is still active.`);
     console.warn("CultivAIte cloud plan could not load", error);
@@ -2499,6 +2647,98 @@ function addPlot() {
   generateLayout();
 }
 
+function activeGarden() {
+  return state.gardens.find((garden) => garden.id === state.activeGardenId) || state.gardens[0];
+}
+
+function renderGardenManager() {
+  if (!els.gardenSelect) return;
+  els.gardenSelect.innerHTML = state.gardens
+    .map((garden) => `<option value="${garden.id}"${garden.id === state.activeGardenId ? " selected" : ""}>${escapeHtml(garden.name)}</option>`)
+    .join("");
+  if (els.deleteGarden) els.deleteGarden.disabled = state.gardens.length < 2;
+}
+
+function loadGardenPlan(gardenId) {
+  const saved = window.localStorage.getItem(gardenPlanKey(gardenId));
+  if (!saved) return false;
+  try {
+    const plan = JSON.parse(saved);
+    applyPlanSnapshot({ ...plan, activeGardenId: gardenId, gardens: state.gardens });
+    return true;
+  } catch (error) {
+    setSaveStatus("Saved garden could not load");
+    console.warn("CultivAIte could not load this garden", error);
+    return false;
+  }
+}
+
+function switchGarden(gardenId) {
+  if (!gardenId || gardenId === state.activeGardenId) return;
+  savePlan();
+  state.activeGardenId = gardenId;
+  if (!loadGardenPlan(gardenId)) resetPlanForGarden(gardenId);
+  state.selectedPlantUid = "";
+  syncControlsFromPlot();
+  render();
+}
+
+function resetPlanForGarden(gardenId) {
+  state.activeGardenId = gardenId;
+  state.activePlotId = `plot-${Date.now()}`;
+  state.activePageId = "layoutPage";
+  state.selectedPlantUid = "";
+  state.completedTasks = [];
+  state.onboardingComplete = true;
+  state.plots.splice(0, state.plots.length, {
+    id: state.activePlotId,
+    name: "Main bed",
+    width: 8,
+    length: 12,
+    goal: "balanced",
+    selected: new Map([["lettuce", 6], ["carrot", 12], ["marigold", 4]]),
+    plantedDates: {},
+    placedPlants: []
+  });
+  syncControlsFromPlot();
+  generateLayout();
+}
+
+function createGarden() {
+  const name = window.prompt("Name this garden", `Garden ${state.gardens.length + 1}`);
+  if (!name) return;
+  savePlan();
+  const id = `garden-${Date.now()}`;
+  state.gardens.push({ id, name: name.trim() || `Garden ${state.gardens.length + 1}` });
+  resetPlanForGarden(id);
+}
+
+function renameGarden() {
+  const garden = activeGarden();
+  if (!garden) return;
+  const name = window.prompt("Rename this garden", garden.name);
+  if (!name) return;
+  garden.name = name.trim() || garden.name;
+  renderGardenManager();
+  savePlan();
+}
+
+function deleteGarden() {
+  const garden = activeGarden();
+  if (!garden || state.gardens.length < 2) return;
+  if (!window.confirm(`Delete "${garden.name}"? This removes it from this device and your next cloud sync.`)) return;
+  if (cloudState.ready && cloudState.user && cloudState.dbApi) {
+    const ref = cloudDocRef(garden.id);
+    if (ref) cloudState.dbApi.deleteDoc(ref).catch((error) => console.warn("CultivAIte could not delete the cloud garden", error));
+  }
+  window.localStorage.removeItem(gardenPlanKey(garden.id));
+  state.gardens = state.gardens.filter((item) => item.id !== garden.id);
+  state.activeGardenId = state.gardens[0].id;
+  if (!loadGardenPlan(state.activeGardenId)) resetPlanForGarden(state.activeGardenId);
+  syncControlsFromPlot();
+  render();
+}
+
 function renderPlotTabs() {
   els.plotTabs.innerHTML = "";
   state.plots.forEach((plot) => {
@@ -2677,6 +2917,7 @@ function render() {
   if (els.homePlotText) els.homePlotText.textContent = `${plot.name}: ${plot.width} x ${plot.length} ft`;
   if (els.homeZoneText) els.homeZoneText.textContent = `${climate.zone} · ${extension.source}`;
 
+  renderGardenManager();
   renderPlotTabs();
   renderPlantPicker();
   renderPlot();
@@ -3353,6 +3594,10 @@ els.navButtons.forEach((button) => {
 els.pageJumps.forEach((button) => {
   button.addEventListener("click", () => switchPage(button.dataset.pageJump));
 });
+if (els.gardenSelect) els.gardenSelect.addEventListener("change", () => switchGarden(els.gardenSelect.value));
+if (els.newGarden) els.newGarden.addEventListener("click", createGarden);
+if (els.renameGarden) els.renameGarden.addEventListener("click", renameGarden);
+if (els.deleteGarden) els.deleteGarden.addEventListener("click", deleteGarden);
 if (els.createAccount) {
   els.createAccount.addEventListener("click", async () => {
     if (!(await initCloudSave())) return;
@@ -3385,6 +3630,22 @@ if (els.signIn) {
       await cloudState.authApi.signInWithEmailAndPassword(cloudState.auth, email, password);
     } catch (error) {
       setCloudStatus(error.message || "Sign in failed.");
+    }
+  });
+}
+if (els.resetPassword) {
+  els.resetPassword.addEventListener("click", async () => {
+    if (!(await initCloudSave())) return;
+    const email = els.cloudEmail.value.trim();
+    if (!email) {
+      setCloudStatus("Enter your email first, then tap reset password.");
+      return;
+    }
+    try {
+      await cloudState.authApi.sendPasswordResetEmail(cloudState.auth, email);
+      setCloudStatus(`Password reset sent to ${email}.`);
+    } catch (error) {
+      setCloudStatus(error.message || "Password reset could not be sent.");
     }
   });
 }
