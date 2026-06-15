@@ -381,6 +381,55 @@ select:focus {
   line-height: 1.25;
 }
 
+.cloud-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(83, 99, 63, 0.24);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(244, 239, 228, 0.96), rgba(255, 250, 243, 0.96)),
+    rgba(83, 99, 63, 0.08);
+}
+
+.cloud-card p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.cloud-controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.cloud-controls input {
+  height: 38px;
+}
+
+.cloud-controls button {
+  min-height: 36px;
+  padding: 0 10px;
+  border-radius: 8px;
+  background: var(--soil-brown);
+  color: #fff;
+  font-weight: 900;
+}
+
+.cloud-controls button:first-of-type,
+.cloud-controls button:nth-of-type(3) {
+  background: var(--harvest-gold);
+  color: var(--soil-brown);
+}
+
+.cloud-controls button:disabled,
+.cloud-controls input:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 .save-now {
   min-height: 34px;
   width: 100%;
@@ -1028,6 +1077,7 @@ select:focus {
   }
 
   .control-grid,
+  .cloud-controls,
   .context-card,
   .insight-strip,
   .schedule-list,
@@ -1215,6 +1265,22 @@ select:focus {
           </div>
         </div>
 
+        <section class="cloud-card" aria-label="Cloud save">
+          <div>
+            <span class="context-label">Account save</span>
+            <h2>Cloud save</h2>
+            <p id="cloudStatus">Local device save is active. Add Firebase keys to turn on account saving.</p>
+          </div>
+          <div class="cloud-controls">
+            <input id="cloudEmail" type="email" autocomplete="email" placeholder="Email" />
+            <input id="cloudPassword" type="password" autocomplete="current-password" placeholder="Password" />
+            <button id="createAccountBtn" type="button">Create account</button>
+            <button id="signInBtn" type="button">Sign in</button>
+            <button id="syncCloudBtn" type="button">Sync now</button>
+            <button id="signOutBtn" type="button">Sign out</button>
+          </div>
+        </section>
+
         <section class="plant-picker" aria-label="Plant picker">
           <div class="section-heading">
             <h2>Plants</h2>
@@ -1362,6 +1428,13 @@ const plantLibrary = [
 
 const STORAGE_KEY = "cultivaite-garden-plan-v1";
 const LEGACY_STORAGE_KEY = "sol-garden-plan-v1";
+const FIREBASE_CONFIG = {
+  apiKey: "",
+  authDomain: "",
+  projectId: "",
+  appId: ""
+};
+
 const USDA_ZONE_BY_ZIP = {
   "50161": { zone: "5b", frost: "2026-05-02", heat: "upper Midwest season", source: "USDA ZIP lookup" },
   "60614": { zone: "6a", frost: "2026-04-24", heat: "shorter spring", source: "USDA ZIP lookup" },
@@ -1426,6 +1499,17 @@ const state = {
 
 let activeDrag = null;
 let saveTimer = null;
+let cloudTimer = null;
+const cloudState = {
+  ready: false,
+  loading: false,
+  app: null,
+  auth: null,
+  db: null,
+  user: null,
+  authApi: null,
+  dbApi: null
+};
 
 const els = {
   zip: document.querySelector("#zipInput"),
@@ -1468,16 +1552,23 @@ const els = {
   askForm: document.querySelector("#askForm"),
   askInput: document.querySelector("#askInput"),
   chatWindow: document.querySelector("#chatWindow"),
-  pageJumps: document.querySelectorAll("[data-page-jump]")
+  pageJumps: document.querySelectorAll("[data-page-jump]"),
+  cloudStatus: document.querySelector("#cloudStatus"),
+  cloudEmail: document.querySelector("#cloudEmail"),
+  cloudPassword: document.querySelector("#cloudPassword"),
+  createAccount: document.querySelector("#createAccountBtn"),
+  signIn: document.querySelector("#signInBtn"),
+  syncCloud: document.querySelector("#syncCloudBtn"),
+  signOut: document.querySelector("#signOutBtn")
 };
 
 function activePlot() {
   return state.plots.find((plot) => plot.id === state.activePlotId);
 }
 
-function savePlan() {
+function getPlanSnapshot() {
   syncPlotFromControls();
-  const plan = {
+  return {
     zip: els.zip.value,
     activePlotId: state.activePlotId,
     activePageId: state.activePageId,
@@ -1489,9 +1580,39 @@ function savePlan() {
       selected: [...plot.selected.entries()]
     }))
   };
+}
+
+function applyPlanSnapshot(plan) {
+  if (!plan) return;
+  if (plan.zip) els.zip.value = plan.zip;
+  if (Array.isArray(plan.plantLibrary)) {
+    plantLibrary.splice(0, plantLibrary.length, ...plan.plantLibrary);
+  }
+  if (Array.isArray(plan.plots) && plan.plots.length) {
+    state.plots.splice(
+      0,
+      state.plots.length,
+      ...plan.plots.map((plot) => ({
+        ...plot,
+        selected: new Map(plot.selected || []),
+        placedPlants: Array.isArray(plot.placedPlants) ? plot.placedPlants : []
+      }))
+    );
+  }
+  if (plan.activePlotId && state.plots.some((plot) => plot.id === plan.activePlotId)) {
+    state.activePlotId = plan.activePlotId;
+  }
+  if (plan.activePageId) state.activePageId = plan.activePageId;
+  if (plan.selectedPlantUid) state.selectedPlantUid = plan.selectedPlantUid;
+  if (Array.isArray(plan.completedTasks)) state.completedTasks = plan.completedTasks;
+}
+
+function savePlan() {
+  const plan = getPlanSnapshot();
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(plan));
     setSaveStatus(`Autosaved ${new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`);
+    queueCloudSave();
   } catch (error) {
     setSaveStatus("Not saved on this device");
     console.warn("CultivAIte could not save this plan", error);
@@ -1504,27 +1625,7 @@ function loadSavedPlan() {
 
   try {
     const plan = JSON.parse(saved);
-    if (plan.zip) els.zip.value = plan.zip;
-    if (Array.isArray(plan.plantLibrary)) {
-      plantLibrary.splice(0, plantLibrary.length, ...plan.plantLibrary);
-    }
-    if (Array.isArray(plan.plots) && plan.plots.length) {
-      state.plots.splice(
-        0,
-        state.plots.length,
-        ...plan.plots.map((plot) => ({
-          ...plot,
-          selected: new Map(plot.selected || []),
-          placedPlants: Array.isArray(plot.placedPlants) ? plot.placedPlants : []
-        }))
-      );
-    }
-    if (plan.activePlotId && state.plots.some((plot) => plot.id === plan.activePlotId)) {
-      state.activePlotId = plan.activePlotId;
-    }
-    if (plan.activePageId) state.activePageId = plan.activePageId;
-    if (plan.selectedPlantUid) state.selectedPlantUid = plan.selectedPlantUid;
-    if (Array.isArray(plan.completedTasks)) state.completedTasks = plan.completedTasks;
+    applyPlanSnapshot(plan);
   } catch (error) {
     if (els.saveStatus) els.saveStatus.textContent = "Saved plan could not load";
     console.warn("CultivAIte could not load the saved plan", error);
@@ -1545,6 +1646,118 @@ function queueAutoSave() {
   window.clearTimeout(saveTimer);
   setSaveStatus("Saving...");
   saveTimer = window.setTimeout(savePlan, 180);
+}
+
+function firebaseConfigured() {
+  return Boolean(FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.authDomain && FIREBASE_CONFIG.projectId && FIREBASE_CONFIG.appId);
+}
+
+function setCloudStatus(message) {
+  if (els.cloudStatus) els.cloudStatus.textContent = message;
+}
+
+async function initCloudSave() {
+  if (!els.cloudStatus) return false;
+  if (!firebaseConfigured()) {
+    setCloudStatus("Local device save is active. Add Firebase keys to turn on account saving.");
+    return false;
+  }
+  if (cloudState.ready) return true;
+  if (cloudState.loading) return false;
+
+  cloudState.loading = true;
+  setCloudStatus("Connecting cloud save...");
+  try {
+    const [appApi, authApi, dbApi] = await Promise.all([
+      import("https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js"),
+      import("https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js"),
+      import("https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js")
+    ]);
+    cloudState.app = appApi.initializeApp(FIREBASE_CONFIG);
+    cloudState.auth = authApi.getAuth(cloudState.app);
+    cloudState.db = dbApi.getFirestore(cloudState.app);
+    cloudState.authApi = authApi;
+    cloudState.dbApi = dbApi;
+    authApi.onAuthStateChanged(cloudState.auth, async (user) => {
+      cloudState.user = user;
+      if (user) {
+        setCloudStatus(`Signed in as ${user.email || "garden account"}. Cloud save is active.`);
+        await loadCloudPlan();
+      } else {
+        setCloudStatus("Cloud save is ready. Sign in to sync this garden across devices.");
+      }
+      updateCloudButtons();
+    });
+    cloudState.ready = true;
+    return true;
+  } catch (error) {
+    setCloudStatus("Cloud save could not connect. Local saving is still active.");
+    console.warn("CultivAIte cloud save could not connect", error);
+    return false;
+  } finally {
+    cloudState.loading = false;
+    updateCloudButtons();
+  }
+}
+
+function updateCloudButtons() {
+  const configured = firebaseConfigured();
+  const signedIn = Boolean(cloudState.user);
+  [els.cloudEmail, els.cloudPassword, els.createAccount, els.signIn, els.syncCloud, els.signOut].forEach((item) => {
+    if (item) item.disabled = !configured || cloudState.loading;
+  });
+  if (els.syncCloud) els.syncCloud.disabled = !configured || cloudState.loading || !signedIn;
+  if (els.signOut) els.signOut.disabled = !configured || cloudState.loading || !signedIn;
+}
+
+function cloudDocRef() {
+  if (!cloudState.user || !cloudState.dbApi) return null;
+  return cloudState.dbApi.doc(cloudState.db, "users", cloudState.user.uid, "gardens", "current");
+}
+
+async function saveCloudPlan() {
+  if (!cloudState.ready || !cloudState.user) return;
+  const ref = cloudDocRef();
+  if (!ref) return;
+  try {
+    await cloudState.dbApi.setDoc(ref, {
+      plan: getPlanSnapshot(),
+      updatedAt: cloudState.dbApi.serverTimestamp()
+    });
+    setCloudStatus(`Cloud saved ${new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`);
+  } catch (error) {
+    setCloudStatus("Cloud save failed. Local saving is still active.");
+    console.warn("CultivAIte cloud save failed", error);
+  }
+}
+
+function queueCloudSave() {
+  if (!cloudState.ready || !cloudState.user) return;
+  window.clearTimeout(cloudTimer);
+  cloudTimer = window.setTimeout(saveCloudPlan, 900);
+}
+
+async function loadCloudPlan() {
+  if (!cloudState.ready || !cloudState.user) return;
+  const ref = cloudDocRef();
+  if (!ref) return;
+  try {
+    const saved = await cloudState.dbApi.getDoc(ref);
+    if (!saved.exists()) {
+      await saveCloudPlan();
+      return;
+    }
+    const data = saved.data();
+    if (data?.plan) {
+      applyPlanSnapshot(data.plan);
+      syncControlsFromPlot();
+      render();
+      setCloudStatus(`Cloud plan loaded for ${cloudState.user.email || "your account"}.`);
+    }
+  } catch (error) {
+    setCloudStatus("Cloud plan could not load. Local saving is still active.");
+    console.warn("CultivAIte cloud plan could not load", error);
+  }
 }
 
 function climateForZip(zip) {
@@ -2410,6 +2623,54 @@ els.navButtons.forEach((button) => {
 els.pageJumps.forEach((button) => {
   button.addEventListener("click", () => switchPage(button.dataset.pageJump));
 });
+if (els.createAccount) {
+  els.createAccount.addEventListener("click", async () => {
+    if (!(await initCloudSave())) return;
+    const email = els.cloudEmail.value.trim();
+    const password = els.cloudPassword.value;
+    if (!email || password.length < 6) {
+      setCloudStatus("Enter an email and a password with at least 6 characters.");
+      return;
+    }
+    try {
+      setCloudStatus("Creating your garden account...");
+      await cloudState.authApi.createUserWithEmailAndPassword(cloudState.auth, email, password);
+      await saveCloudPlan();
+    } catch (error) {
+      setCloudStatus(error.message || "Account could not be created.");
+    }
+  });
+}
+if (els.signIn) {
+  els.signIn.addEventListener("click", async () => {
+    if (!(await initCloudSave())) return;
+    const email = els.cloudEmail.value.trim();
+    const password = els.cloudPassword.value;
+    if (!email || !password) {
+      setCloudStatus("Enter your email and password to sign in.");
+      return;
+    }
+    try {
+      setCloudStatus("Signing in...");
+      await cloudState.authApi.signInWithEmailAndPassword(cloudState.auth, email, password);
+    } catch (error) {
+      setCloudStatus(error.message || "Sign in failed.");
+    }
+  });
+}
+if (els.syncCloud) {
+  els.syncCloud.addEventListener("click", async () => {
+    if (!(await initCloudSave())) return;
+    await saveCloudPlan();
+  });
+}
+if (els.signOut) {
+  els.signOut.addEventListener("click", async () => {
+    if (!(await initCloudSave())) return;
+    await cloudState.authApi.signOut(cloudState.auth);
+    setCloudStatus("Signed out. Local device save is still active.");
+  });
+}
 els.plannerForm.addEventListener("submit", (event) => {
   event.preventDefault();
   saveCurrentPlan();
@@ -2438,6 +2699,8 @@ loadSavedPlan();
 syncControlsFromPlot();
 if (activePlot().placedPlants.length) render();
 else generateLayout();
+updateCloudButtons();
+initCloudSave();
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
