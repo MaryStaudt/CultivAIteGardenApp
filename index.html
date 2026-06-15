@@ -392,7 +392,35 @@ select:focus {
     rgba(83, 99, 63, 0.08);
 }
 
+.cloud-summary {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: start;
+}
+
+.cloud-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid rgba(83, 99, 63, 0.22);
+  border-radius: 999px;
+  background: rgba(255, 250, 243, 0.84);
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.cloud-badge.is-signed-in {
+  border-color: rgba(83, 99, 63, 0.32);
+  background: rgba(83, 99, 63, 0.14);
+  color: var(--moss-green);
+}
+
 .cloud-card p {
+  grid-column: 1 / -1;
   margin: 6px 0 0;
   color: var(--muted);
   font-size: 0.82rem;
@@ -401,8 +429,27 @@ select:focus {
 
 .cloud-controls {
   display: grid;
+  gap: 8px;
+}
+
+.cloud-signin-fields,
+.cloud-action-row {
+  display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
+}
+
+.cloud-card.is-signed-in .cloud-signin-fields {
+  display: none;
+}
+
+.cloud-card.is-signed-in .cloud-action-row {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.cloud-card.is-signed-in #createAccountBtn,
+.cloud-card.is-signed-in #signInBtn {
+  display: none;
 }
 
 .cloud-controls input {
@@ -419,7 +466,7 @@ select:focus {
 }
 
 .cloud-controls button:first-of-type,
-.cloud-controls button:nth-of-type(3) {
+#syncCloudBtn {
   background: var(--harvest-gold);
   color: var(--soil-brown);
 }
@@ -1266,18 +1313,25 @@ select:focus {
         </div>
 
         <section class="cloud-card" aria-label="Cloud save">
-          <div>
-            <span class="context-label">Account save</span>
-            <h2>Cloud save</h2>
+          <div class="cloud-summary">
+            <div>
+              <span class="context-label">Account save</span>
+              <h2>Cloud save</h2>
+            </div>
+            <span class="cloud-badge" id="cloudAccountBadge">Local only</span>
             <p id="cloudStatus">Local device save is active. Add Firebase keys to turn on account saving.</p>
           </div>
           <div class="cloud-controls">
-            <input id="cloudEmail" type="email" autocomplete="email" placeholder="Email" />
-            <input id="cloudPassword" type="password" autocomplete="current-password" placeholder="Password" />
-            <button id="createAccountBtn" type="button">Create account</button>
-            <button id="signInBtn" type="button">Sign in</button>
-            <button id="syncCloudBtn" type="button">Sync now</button>
-            <button id="signOutBtn" type="button">Sign out</button>
+            <div class="cloud-signin-fields" id="cloudSignInFields">
+              <input id="cloudEmail" type="email" autocomplete="email" placeholder="Email" />
+              <input id="cloudPassword" type="password" autocomplete="current-password" placeholder="Password" />
+            </div>
+            <div class="cloud-action-row">
+              <button id="createAccountBtn" type="button">Create account</button>
+              <button id="signInBtn" type="button">Sign in</button>
+              <button id="syncCloudBtn" type="button">Sync now</button>
+              <button id="signOutBtn" type="button">Sign out</button>
+            </div>
           </div>
         </section>
 
@@ -1556,6 +1610,8 @@ const els = {
   askInput: document.querySelector("#askInput"),
   chatWindow: document.querySelector("#chatWindow"),
   pageJumps: document.querySelectorAll("[data-page-jump]"),
+  cloudCard: document.querySelector(".cloud-card"),
+  cloudAccountBadge: document.querySelector("#cloudAccountBadge"),
   cloudStatus: document.querySelector("#cloudStatus"),
   cloudEmail: document.querySelector("#cloudEmail"),
   cloudPassword: document.querySelector("#cloudPassword"),
@@ -1692,6 +1748,7 @@ async function initCloudSave() {
     authApi.onAuthStateChanged(cloudState.auth, async (user) => {
       cloudState.user = user;
       if (user) {
+        if (els.cloudPassword) els.cloudPassword.value = "";
         setCloudStatus(`Signed in as ${user.email || "garden account"}. Cloud save is active.`);
         await loadCloudPlan();
       } else {
@@ -1714,6 +1771,11 @@ async function initCloudSave() {
 function updateCloudButtons() {
   const configured = firebaseConfigured();
   const signedIn = Boolean(cloudState.user);
+  if (els.cloudCard) els.cloudCard.classList.toggle("is-signed-in", signedIn);
+  if (els.cloudAccountBadge) {
+    els.cloudAccountBadge.textContent = signedIn ? "Signed in" : configured ? "Ready" : "Local only";
+    els.cloudAccountBadge.classList.toggle("is-signed-in", signedIn);
+  }
   [els.cloudEmail, els.cloudPassword, els.createAccount, els.signIn, els.syncCloud, els.signOut].forEach((item) => {
     if (item) item.disabled = !configured || cloudState.loading;
   });
