@@ -678,6 +678,16 @@ select:focus {
   gap: 12px;
 }
 
+.plant-search {
+  display: grid;
+  gap: 6px;
+}
+
+.plant-search input {
+  min-height: 42px;
+  background: rgba(255, 250, 243, 0.94);
+}
+
 .plot-manager,
 .custom-plant {
   display: grid;
@@ -692,6 +702,13 @@ select:focus {
   background: var(--ink);
   color: #fff;
   font-weight: 900;
+}
+
+.auto-plant-note {
+  margin: -4px 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.4;
 }
 
 .plot-tabs {
@@ -740,6 +757,9 @@ select:focus {
 .plant-list {
   display: grid;
   gap: 8px;
+  max-height: 390px;
+  overflow: auto;
+  padding-right: 3px;
 }
 
 .plant-option {
@@ -1119,6 +1139,15 @@ select:focus {
   color: rgba(255, 255, 255, 0.88);
   font-weight: 900;
   text-align: center;
+}
+
+.empty-state.compact {
+  min-height: 84px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(83, 99, 63, 0.12);
+  color: var(--muted);
 }
 
 .schedule-list {
@@ -1733,6 +1762,30 @@ select:focus {
           </div>
         </div>
 
+        <section class="plant-picker" aria-label="Plant picker">
+          <div class="section-heading">
+            <h2>Plants</h2>
+            <span id="plantCount">0 selected</span>
+          </div>
+          <label class="plant-search">
+            Search plant library
+            <input id="plantSearchInput" type="search" placeholder="Try tomato, basil, carrot, kale..." />
+          </label>
+          <div class="plant-list" id="plantList"></div>
+        </section>
+
+        <form class="custom-plant" id="customPlantForm">
+          <div class="section-heading">
+            <h2>Add a plant</h2>
+          </div>
+          <label>
+            Plant name
+            <input id="customPlantName" placeholder="Kale" />
+          </label>
+          <p class="auto-plant-note">CultivAIte will fill sun, spacing, timing, and care defaults automatically.</p>
+          <button id="customPlantBtn" type="submit">Add to plot</button>
+        </form>
+
         <section class="cloud-card" aria-label="Cloud save">
           <div class="cloud-summary">
             <div>
@@ -1756,41 +1809,6 @@ select:focus {
             </div>
           </div>
         </section>
-
-        <section class="plant-picker" aria-label="Plant picker">
-          <div class="section-heading">
-            <h2>Plants</h2>
-            <span id="plantCount">0 selected</span>
-          </div>
-          <div class="plant-list" id="plantList"></div>
-        </section>
-
-        <form class="custom-plant" id="customPlantForm">
-          <div class="section-heading">
-            <h2>Add a plant</h2>
-          </div>
-          <label>
-            Plant name
-            <input id="customPlantName" placeholder="Kale" />
-          </label>
-          <div class="control-grid">
-            <label>
-              Sun
-              <select id="customPlantSun">
-                <option value="full">Full sun</option>
-                <option value="part">Part sun</option>
-              </select>
-            </label>
-            <label>
-              Spacing
-              <div class="unit-input">
-                <input id="customPlantSpacing" type="number" min="0.5" max="8" step="0.5" value="1.5" />
-                <span>ft</span>
-              </div>
-            </label>
-          </div>
-          <button id="customPlantBtn" type="submit">Add to plot</button>
-        </form>
       </section>
 
       <section class="garden-stage">
@@ -2060,6 +2078,7 @@ const els = {
   deleteGarden: document.querySelector("#deleteGardenBtn"),
   plotTabs: document.querySelector("#plotTabs"),
   addPlot: document.querySelector("#addPlotBtn"),
+  plantSearch: document.querySelector("#plantSearchInput"),
   plantList: document.querySelector("#plantList"),
   plantCount: document.querySelector("#plantCount"),
   zoneText: document.querySelector("#zoneText"),
@@ -2767,7 +2786,23 @@ function selectPlacedPlant(uid) {
 function renderPlantPicker() {
   const plot = activePlot();
   els.plantList.innerHTML = "";
-  plantLibrary.forEach((plant) => {
+  const query = (els.plantSearch?.value || "").trim().toLowerCase();
+  const visiblePlants = plantLibrary.filter((plant) => {
+    const qty = plot.selected.get(plant.id) || 0;
+    if (!query) return qty > 0;
+    const strategy = strategyForPlant(plant);
+    return [plant.name, plant.id, plant.sun, strategy.family, strategy.cropType]
+      .filter(Boolean)
+      .some((value) => String(value).toLowerCase().includes(query));
+  });
+
+  if (!visiblePlants.length) {
+    els.plantList.innerHTML = query
+      ? `<div class="empty-state compact">No plant match yet. Use “Add a plant” and CultivAIte will estimate its needs.</div>`
+      : `<div class="empty-state compact">Search the plant library or add a plant to begin.</div>`;
+  }
+
+  visiblePlants.forEach((plant) => {
     const qty = plot.selected.get(plant.id) || 0;
     const row = document.createElement("div");
     row.className = `plant-option${qty ? " active" : ""}`;
@@ -3534,26 +3569,64 @@ function escapeHtml(text) {
   })[char]);
 }
 
+function findLibraryPlantByName(name) {
+  const normalized = name.toLowerCase().trim();
+  return plantLibrary.find((plant) => plant.name.toLowerCase() === normalized || plant.id.toLowerCase() === normalized);
+}
+
+function inferPlantProfile(name) {
+  const lower = name.toLowerCase();
+  if (/(tomato|pepper|eggplant)/.test(lower)) {
+    return { sun: "full", spacing: 2, start: -42, transplant: 14, harvest: 75, water: "steady", color: "#a7653b" };
+  }
+  if (/(squash|pumpkin|melon|cucumber)/.test(lower)) {
+    return { sun: "full", spacing: 3, start: -21, transplant: 14, harvest: 70, water: "deep", color: "#53633f" };
+  }
+  if (/(lettuce|spinach|kale|chard|arugula|greens)/.test(lower)) {
+    return { sun: "part", spacing: 1, start: -28, transplant: -7, harvest: 45, water: "even", color: "#87916f" };
+  }
+  if (/(carrot|radish|beet|turnip|onion|garlic)/.test(lower)) {
+    return { sun: "full", spacing: 0.6, start: -21, transplant: -7, harvest: 60, water: "light", color: "#e79729" };
+  }
+  if (/(basil|parsley|cilantro|dill|thyme|oregano|sage|mint|herb)/.test(lower)) {
+    return { sun: "part", spacing: 1, start: -28, transplant: 7, harvest: 55, water: "steady", color: "#53633f" };
+  }
+  if (/(marigold|calendula|nasturtium|flower|zinnia|cosmos)/.test(lower)) {
+    return { sun: "full", spacing: 1, start: -28, transplant: 7, harvest: 55, water: "light", color: "#e79729" };
+  }
+  return { sun: "full", spacing: 1.5, start: -21, transplant: 7, harvest: 60, water: "steady", color: "#87916f" };
+}
+
 function addCustomPlant(event) {
   event.preventDefault();
   const name = els.customName.value.trim();
   if (!name) return;
+  const existing = findLibraryPlantByName(name);
+  if (existing) {
+    activePlot().selected.set(existing.id, (activePlot().selected.get(existing.id) || 0) + 1);
+    els.customName.value = "";
+    if (els.plantSearch) els.plantSearch.value = existing.name;
+    generateLayout();
+    return;
+  }
+  const profile = inferPlantProfile(name);
   const id = `custom-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${Date.now()}`;
   plantLibrary.push({
     id,
     name,
     short: name.slice(0, 3),
-    color: "#87916f",
-    sun: els.customSun.value,
-    spacing: Number(els.customSpacing.value) || 1.5,
-    start: -21,
-    transplant: 7,
-    harvest: 60,
-    water: "steady",
+    color: profile.color,
+    sun: profile.sun,
+    spacing: profile.spacing,
+    start: profile.start,
+    transplant: profile.transplant,
+    harvest: profile.harvest,
+    water: profile.water,
     companions: []
   });
   activePlot().selected.set(id, 1);
   els.customName.value = "";
+  if (els.plantSearch) els.plantSearch.value = name;
   generateLayout();
 }
 
@@ -3668,6 +3741,7 @@ if (els.calendarToday) els.calendarToday.addEventListener("click", jumpCalendarT
 if (els.onboardingForm) els.onboardingForm.addEventListener("submit", applyOnboarding);
 if (els.skipOnboarding) els.skipOnboarding.addEventListener("click", closeOnboarding);
 if (els.onboardAlreadyPlanted) els.onboardAlreadyPlanted.addEventListener("change", toggleOnboardingDatePanel);
+if (els.plantSearch) els.plantSearch.addEventListener("input", renderPlantPicker);
 els.plannerForm.addEventListener("submit", (event) => {
   event.preventDefault();
   saveCurrentPlan();
@@ -3691,6 +3765,16 @@ window.addEventListener("resize", renderPlot);
 window.addEventListener("beforeunload", savePlan);
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "hidden") savePlan();
+});
+document.addEventListener("input", (event) => {
+  const field = event.target.closest("input, select, textarea");
+  if (!field || field.type === "password" || field.id === "plantSearchInput") return;
+  queueAutoSave();
+});
+document.addEventListener("change", (event) => {
+  const field = event.target.closest("input, select, textarea");
+  if (!field || field.type === "password") return;
+  savePlan();
 });
 
 loadSavedPlan();
