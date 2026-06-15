@@ -711,6 +711,43 @@ select:focus {
   line-height: 1.4;
 }
 
+.seed-packet-panel {
+  padding: 10px;
+  border: 1px solid rgba(83, 99, 63, 0.22);
+  border-radius: 8px;
+  background: rgba(244, 239, 228, 0.62);
+}
+
+.seed-packet-panel summary {
+  cursor: pointer;
+  color: var(--soil-brown);
+  font-weight: 900;
+}
+
+.seed-packet-panel[open] {
+  display: grid;
+  gap: 12px;
+}
+
+.seed-packet-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.packet-image-status {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.seed-packet-panel textarea {
+  resize: vertical;
+  min-height: 84px;
+}
+
 .plot-tabs {
   display: grid;
   gap: 8px;
@@ -1503,7 +1540,8 @@ select:focus {
   }
 
   .onboarding-row,
-  .starter-plants {
+  .starter-plants,
+  .seed-packet-grid {
     grid-template-columns: 1fr;
   }
 
@@ -1782,7 +1820,57 @@ select:focus {
             Plant name
             <input id="customPlantName" placeholder="Kale" />
           </label>
-          <p class="auto-plant-note">CultivAIte will fill sun, spacing, timing, and care defaults automatically.</p>
+          <details class="seed-packet-panel">
+            <summary>Seed packet details</summary>
+            <label>
+              Packet photo
+              <input id="packetImageInput" type="file" accept="image/*" capture="environment" />
+              <span id="packetImageStatus" class="packet-image-status">No packet photo attached</span>
+            </label>
+            <div class="seed-packet-grid">
+              <label>
+                Sun
+                <select id="packetSunInput">
+                  <option value="">Let CultivAIte decide</option>
+                  <option value="full">Full sun</option>
+                  <option value="part">Part sun</option>
+                </select>
+              </label>
+              <label>
+                Spacing
+                <div class="unit-input">
+                  <input id="packetSpacingInput" type="number" min="0.25" max="8" step="0.25" placeholder="1.5" />
+                  <span>ft</span>
+                </div>
+              </label>
+              <label>
+                Days to germinate
+                <input id="packetGermInput" type="number" min="1" max="60" placeholder="7" />
+              </label>
+              <label>
+                Days to maturity
+                <input id="packetMaturityInput" type="number" min="15" max="220" placeholder="65" />
+              </label>
+              <label>
+                Planting depth
+                <input id="packetDepthInput" placeholder="1/4 inch" />
+              </label>
+              <label>
+                Planting method
+                <select id="packetMethodInput">
+                  <option value="">Let CultivAIte decide</option>
+                  <option value="direct">Direct sow</option>
+                  <option value="indoor">Start indoors</option>
+                  <option value="transplant">Transplant seedling</option>
+                </select>
+              </label>
+            </div>
+            <label>
+              Packet notes
+              <textarea id="packetNotesInput" rows="3" placeholder="Example: thin to 12 inches, harvest when pods are firm"></textarea>
+            </label>
+          </details>
+          <p class="auto-plant-note">CultivAIte fills sun, spacing, timing, and care defaults automatically. Packet details override the defaults.</p>
           <button id="customPlantBtn" type="submit">Add to plot</button>
         </form>
 
@@ -2100,6 +2188,15 @@ const els = {
   customName: document.querySelector("#customPlantName"),
   customSun: document.querySelector("#customPlantSun"),
   customSpacing: document.querySelector("#customPlantSpacing"),
+  packetImage: document.querySelector("#packetImageInput"),
+  packetImageStatus: document.querySelector("#packetImageStatus"),
+  packetSun: document.querySelector("#packetSunInput"),
+  packetSpacing: document.querySelector("#packetSpacingInput"),
+  packetGerm: document.querySelector("#packetGermInput"),
+  packetMaturity: document.querySelector("#packetMaturityInput"),
+  packetDepth: document.querySelector("#packetDepthInput"),
+  packetMethod: document.querySelector("#packetMethodInput"),
+  packetNotes: document.querySelector("#packetNotesInput"),
   navButtons: document.querySelectorAll(".nav-btn"),
   pages: document.querySelectorAll(".page"),
   homePlotText: document.querySelector("#homePlotText"),
@@ -2630,7 +2727,7 @@ function taskTimingForPlant(plant, extension) {
   return {
     start: isCoolSeason ? Math.min(plant.start, extension.coolStart) : plant.start,
     transplant: isWarmSeason ? plant.transplant + extension.warmDelay : plant.transplant,
-    harvest: plant.harvest
+    harvest: plant.packet?.daysToMaturity || plant.harvest
   };
 }
 
@@ -2811,7 +2908,7 @@ function renderPlantPicker() {
       <span class="plant-badge" style="background:${plant.color}">${plant.short.slice(0, 1)}</span>
       <span class="plant-meta">
         <strong>${plant.name}</strong>
-        <span>${plant.spacing} ft spacing · ${plant.sun === "full" ? "full sun" : "part sun"} · ${titleCase(strategy.family)}</span>
+        <span>${plant.spacing} ft spacing · ${plant.sun === "full" ? "full sun" : "part sun"} · ${titleCase(strategy.family)}${plant.packet ? " · seed packet" : ""}</span>
       </span>
       <span class="stepper">
         <button type="button" aria-label="Remove ${plant.name}" data-action="minus" data-id="${plant.id}">-</button>
@@ -3116,14 +3213,14 @@ function scheduleTasks(plot, climate) {
       tasks.push({
         date: addDays(climate.frost, timing.start),
         title: `Start ${plant.name}`,
-        copy: plant.start < -1 ? `Sow indoors or under cover using ${extension.region} season timing.` : "Direct sow once soil can be worked.",
+      copy: plant.start < -1 ? `Sow indoors or under cover using ${extension.region} season timing.` : "Direct sow once soil can be worked.",
         key: `${plot.id}-${plant.id}-start`,
         type: "planting"
       });
       tasks.push({
         date: plantDate,
         title: `Plant ${plant.name}`,
-        copy: `${plant.sun === "full" ? "Use the brightest band" : "Use a cooler part-sun band"} with ${plant.spacing} ft spacing. ${plant.family === "nightshade" || plant.family === "cucurbit" ? "Wait for warm soil." : ""}`,
+      copy: `${plant.sun === "full" ? "Use the brightest band" : "Use a cooler part-sun band"} with ${plant.spacing} ft spacing.${plant.packet?.depth ? ` Plant ${plant.packet.depth} deep.` : ""} ${plant.family === "nightshade" || plant.family === "cucurbit" ? "Wait for warm soil." : ""}`,
         key: `${plot.id}-${plant.id}-plant`,
         type: "planting"
       });
@@ -3172,7 +3269,7 @@ function scheduleTasks(plot, climate) {
     tasks.push({
       date: plantedDate ? addDays(isoDate(plantDate), Math.max(21, plant.harvest - Math.max(timing.transplant, 0))) : addDays(climate.frost, timing.harvest),
       title: `Harvest ${plant.name}`,
-      copy: `Check every few days and keep watering ${plant.water}.`,
+      copy: `${plant.packet?.notes || `Check every few days and keep watering ${plant.water}.`}`,
       key: `${plot.id}-${plant.id}-harvest`,
       type: "harvest"
     });
@@ -3597,24 +3694,64 @@ function inferPlantProfile(name) {
   return { sun: "full", spacing: 1.5, start: -21, transplant: 7, harvest: 60, water: "steady", color: "#87916f" };
 }
 
+function packetDetailsFromForm() {
+  const daysToMaturity = Number(els.packetMaturity?.value) || 0;
+  const daysToGerminate = Number(els.packetGerm?.value) || 0;
+  const spacing = Number(els.packetSpacing?.value) || 0;
+  const sun = els.packetSun?.value || "";
+  const method = els.packetMethod?.value || "";
+  const depth = els.packetDepth?.value?.trim() || "";
+  const notes = els.packetNotes?.value?.trim() || "";
+  const imageName = els.packetImage?.files?.[0]?.name || "";
+  const hasDetails = Boolean(daysToMaturity || daysToGerminate || spacing || sun || method || depth || notes || imageName);
+  if (!hasDetails) return null;
+  return { daysToMaturity, daysToGerminate, spacing, sun, method, depth, notes, imageName };
+}
+
+function applyPacketDetails(profile, packet) {
+  if (!packet) return profile;
+  return {
+    ...profile,
+    sun: packet.sun || profile.sun,
+    spacing: packet.spacing || profile.spacing,
+    harvest: packet.daysToMaturity || profile.harvest,
+    start: packet.method === "indoor" ? -42 : packet.method === "direct" ? -7 : profile.start,
+    transplant: packet.method === "direct" ? 0 : packet.method === "indoor" ? 14 : profile.transplant,
+    packet
+  };
+}
+
+function resetPacketForm() {
+  [els.packetSun, els.packetMethod].forEach((field) => {
+    if (field) field.value = "";
+  });
+  [els.packetSpacing, els.packetGerm, els.packetMaturity, els.packetDepth, els.packetNotes].forEach((field) => {
+    if (field) field.value = "";
+  });
+  if (els.packetImage) els.packetImage.value = "";
+  if (els.packetImageStatus) els.packetImageStatus.textContent = "No packet photo attached";
+}
+
 function addCustomPlant(event) {
   event.preventDefault();
   const name = els.customName.value.trim();
   if (!name) return;
   const existing = findLibraryPlantByName(name);
-  if (existing) {
+  const packet = packetDetailsFromForm();
+  if (existing && !packet) {
     activePlot().selected.set(existing.id, (activePlot().selected.get(existing.id) || 0) + 1);
     els.customName.value = "";
     if (els.plantSearch) els.plantSearch.value = existing.name;
     generateLayout();
     return;
   }
-  const profile = inferPlantProfile(name);
+  const baseProfile = existing ? { ...existing } : inferPlantProfile(name);
+  const profile = applyPacketDetails(baseProfile, packet);
   const id = `custom-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${Date.now()}`;
   plantLibrary.push({
     id,
     name,
-    short: name.slice(0, 3),
+    short: existing?.short || name.slice(0, 3),
     color: profile.color,
     sun: profile.sun,
     spacing: profile.spacing,
@@ -3627,6 +3764,7 @@ function addCustomPlant(event) {
   activePlot().selected.set(id, 1);
   els.customName.value = "";
   if (els.plantSearch) els.plantSearch.value = name;
+  resetPacketForm();
   generateLayout();
 }
 
@@ -3742,6 +3880,15 @@ if (els.onboardingForm) els.onboardingForm.addEventListener("submit", applyOnboa
 if (els.skipOnboarding) els.skipOnboarding.addEventListener("click", closeOnboarding);
 if (els.onboardAlreadyPlanted) els.onboardAlreadyPlanted.addEventListener("change", toggleOnboardingDatePanel);
 if (els.plantSearch) els.plantSearch.addEventListener("input", renderPlantPicker);
+if (els.packetImage) {
+  els.packetImage.addEventListener("change", () => {
+    const file = els.packetImage.files?.[0];
+    if (els.packetImageStatus) {
+      els.packetImageStatus.textContent = file ? `Attached: ${file.name}` : "No packet photo attached";
+    }
+    queueAutoSave();
+  });
+}
 els.plannerForm.addEventListener("submit", (event) => {
   event.preventDefault();
   saveCurrentPlan();
