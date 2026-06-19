@@ -1,30 +1,36 @@
-@import url("https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,400;0,700;1,400&family=Nunito:wght@500;600;700;800;900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Bitter:wght@600;700&family=Nunito+Sans:wght@500;600;700;800;900&display=swap");
 
 :root {
   color-scheme: light;
-  --ivory: #f1ede6;
-  --terracotta: #8d4737;
-  --olive: #6d7e43;
-  --sky: #8dbbd0;
-  --moss: #36411b;
-  --earth: #5a4435;
-  --ink: #36411b;
-  --muted: #6d665d;
-  --line: #d9d0c3;
-  --paper: #f1ede6;
-  --panel: #fffaf1;
-  --soil: #8d4737;
-  --soil-dark: #5a4435;
-  --leaf: #6d7e43;
-  --leaf-dark: #36411b;
-  --flower: #8d4737;
-  --gold: #8d4737;
-  --water: #8dbbd0;
-  --shadow: 0 18px 60px rgba(54, 65, 27, 0.14);
-  --font-logo: Nunito, Verdana, sans-serif;
+  --cream: #f4efe4;
+  --soil-brown: #3a3028;
+  --moss-green: #53633f;
+  --sage: #87916f;
+  --clay: #a7653b;
+  --harvest-gold: #e79729;
+  --ivory: #f4efe4;
+  --terracotta: #a7653b;
+  --olive: #53633f;
+  --sky: #87916f;
+  --moss: #53633f;
+  --earth: #3a3028;
+  --ink: #3a3028;
+  --muted: #675d50;
+  --line: #ded3c2;
+  --paper: #f4efe4;
+  --panel: #fffaf3;
+  --soil: #a7653b;
+  --soil-dark: #3a3028;
+  --leaf: #53633f;
+  --leaf-dark: #3a3028;
+  --flower: #a7653b;
+  --gold: #e79729;
+  --water: #87916f;
+  --shadow: 0 18px 54px rgba(58, 48, 40, 0.13);
+  --font-logo: Bitter, Georgia, serif;
   --font-headline: Bitter, Georgia, serif;
-  --font-ui: Nunito, Verdana, sans-serif;
-  --font-body: Verdana, Geneva, sans-serif;
+  --font-ui: "Nunito Sans", Verdana, sans-serif;
+  --font-body: "Nunito Sans", Verdana, sans-serif;
 }
 
 * {
@@ -35,9 +41,9 @@ body {
   margin: 0;
   min-height: 100vh;
   background:
-    linear-gradient(rgba(241, 237, 230, 0.9), rgba(241, 237, 230, 0.96)),
-    repeating-linear-gradient(90deg, rgba(109, 126, 67, 0.08) 0 1px, transparent 1px 86px),
-    repeating-linear-gradient(0deg, rgba(141, 71, 55, 0.07) 0 1px, transparent 1px 86px),
+    linear-gradient(rgba(244, 239, 228, 0.92), rgba(244, 239, 228, 0.97)),
+    repeating-linear-gradient(90deg, rgba(83, 99, 63, 0.06) 0 1px, transparent 1px 92px),
+    repeating-linear-gradient(0deg, rgba(167, 101, 59, 0.055) 0 1px, transparent 1px 92px),
     var(--ivory);
   color: var(--ink);
   font-family: var(--font-body);
@@ -71,7 +77,27 @@ button {
 .app-header h1 {
   font-family: var(--font-logo);
   font-size: clamp(2rem, 4vw, 3.4rem);
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.header-save-status {
+  display: inline-grid;
+  place-items: center;
+  min-height: 34px;
+  margin-left: auto;
+  padding: 0 12px;
+  border: 1px solid rgba(83, 99, 63, 0.22);
+  border-radius: 999px;
+  background: rgba(244, 239, 228, 0.8);
+  color: var(--moss-green);
+  font-size: 0.76rem;
   font-weight: 900;
+  white-space: nowrap;
+}
+
+.brand-ai {
+  color: var(--moss-green);
 }
 
 .brand-lockup {
@@ -86,18 +112,21 @@ button {
 
 .brand-mark {
   flex: 0 0 auto;
-  width: 64px;
-  height: 64px;
-  border: 2px solid rgba(54, 65, 27, 0.16);
-  border-radius: 50%;
-  object-fit: cover;
-  background: var(--ivory);
-  box-shadow: 0 10px 24px rgba(54, 65, 27, 0.16);
+  width: 72px;
+  height: 72px;
+  border: 1px solid rgba(83, 99, 63, 0.24);
+  border-radius: 18px;
+  object-fit: contain;
+  padding: 8px;
+  background: rgba(244, 239, 228, 0.95);
+  box-shadow: 0 12px 26px rgba(58, 48, 40, 0.12);
 }
 
 .brand-lockup.compact .brand-mark {
-  width: 52px;
-  height: 52px;
+  width: 58px;
+  height: 58px;
+  border-radius: 15px;
+  padding: 7px;
 }
 
 .app-nav {
@@ -119,9 +148,9 @@ button {
 
 .nav-btn.active,
 .primary-action {
-  background: var(--moss);
-  color: #fff;
-  border-color: var(--moss);
+  background: var(--harvest-gold);
+  color: var(--soil-brown);
+  border-color: var(--harvest-gold);
 }
 
 .page {
@@ -149,7 +178,7 @@ button {
 .page-panel {
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: rgba(255, 250, 241, 0.94);
+  background: rgba(255, 250, 243, 0.95);
   box-shadow: var(--shadow);
 }
 
@@ -164,7 +193,7 @@ button {
 .home-hero h2 {
   max-width: 720px;
   font-family: var(--font-headline);
-  font-weight: 700;
+  font-weight: 600;
   font-size: clamp(2rem, 5vw, 4.5rem);
   line-height: 0.98;
 }
@@ -190,11 +219,38 @@ button {
   padding: 24px;
 }
 
+.trust-card {
+  grid-column: 1 / -1;
+  padding: 18px;
+  border: 1px solid rgba(83, 99, 63, 0.24);
+  border-radius: 8px;
+  background: rgba(83, 99, 63, 0.09);
+}
+
+.trust-card h3 {
+  margin: 0 0 8px;
+  font-family: var(--font-headline);
+  font-size: 1.2rem;
+  line-height: 1.2;
+}
+
+.trust-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.trust-card.compact {
+  padding: 12px 14px;
+  background: rgba(167, 101, 59, 0.08);
+}
+
 .home-status > div {
   padding: 16px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: rgba(109, 126, 67, 0.12);
+  background: rgba(83, 99, 63, 0.12);
 }
 
 .page-panel {
@@ -308,7 +364,7 @@ select {
   height: 42px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fffaf1;
+  background: var(--panel);
   color: var(--ink);
   padding: 0 12px;
   outline: none;
@@ -317,7 +373,7 @@ select {
 input:focus,
 select:focus {
   border-color: var(--leaf);
-  box-shadow: 0 0 0 3px rgba(141, 71, 55, 0.16);
+  box-shadow: 0 0 0 3px rgba(167, 101, 59, 0.16);
 }
 
 .unit-input {
@@ -326,7 +382,7 @@ select:focus {
   align-items: center;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fffaf1;
+  background: var(--panel);
   overflow: hidden;
 }
 
@@ -341,20 +397,286 @@ select:focus {
   font-weight: 800;
 }
 
+.garden-manager {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+  padding: 14px;
+  border: 1px solid rgba(83, 99, 63, 0.24);
+  border-radius: 8px;
+  background: rgba(244, 239, 228, 0.78);
+}
+
+.garden-manager select {
+  margin-top: 5px;
+  min-height: 40px;
+}
+
+.garden-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.garden-actions button {
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--soil-brown);
+  font-weight: 900;
+}
+
+.garden-actions button:first-child {
+  background: var(--moss-green);
+  color: #fff;
+}
+
 .context-card {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
   gap: 10px;
   padding: 14px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: rgba(109, 126, 67, 0.12);
+  background: rgba(83, 99, 63, 0.12);
+}
+
+.context-card > div {
+  min-width: 0;
 }
 
 .context-card strong {
   display: block;
   font-size: 0.92rem;
   line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.context-card .context-label {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.onboarding-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(58, 48, 40, 0.38);
+  backdrop-filter: blur(5px);
+}
+
+.onboarding-panel.active {
+  display: flex;
+}
+
+.onboarding-card {
+  width: min(760px, 100%);
+  max-height: min(720px, 92vh);
+  overflow: auto;
+  display: grid;
+  gap: 18px;
+  padding: 24px;
+  border: 1px solid rgba(83, 99, 63, 0.22);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: 0 24px 80px rgba(58, 48, 40, 0.24);
+}
+
+.onboarding-card h2 {
+  margin: 0 0 8px;
+  max-width: 620px;
+  color: var(--soil-brown);
+  font-family: "Bitter", Georgia, serif;
+  font-size: clamp(1.8rem, 4vw, 3rem);
+  line-height: 1.04;
+}
+
+.onboarding-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.onboarding-form {
+  display: grid;
+  gap: 14px;
+}
+
+.onboarding-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.starter-plants {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.starter-plants legend {
+  padding: 0 6px;
+  color: var(--soil-brown);
+  font-weight: 900;
+}
+
+.starter-plants label,
+.onboarding-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  color: var(--soil-brown);
+  font-weight: 800;
+}
+
+.starter-plants input,
+.onboarding-check input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--moss-green);
+}
+
+.onboarding-date-panel {
+  display: none;
+}
+
+.onboarding-date-panel.active {
+  display: grid;
+}
+
+.onboarding-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.onboarding-actions button {
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 8px;
+  font-weight: 900;
+}
+
+.onboarding-actions button[type="button"] {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--soil-brown);
+}
+
+.onboarding-actions button[type="submit"] {
+  background: var(--moss-green);
+  color: #fff;
+}
+
+.cloud-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(83, 99, 63, 0.24);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(244, 239, 228, 0.96), rgba(255, 250, 243, 0.96)),
+    rgba(83, 99, 63, 0.08);
+}
+
+.cloud-summary {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: start;
+}
+
+.cloud-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid rgba(83, 99, 63, 0.22);
+  border-radius: 999px;
+  background: rgba(255, 250, 243, 0.84);
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.cloud-badge.is-signed-in {
+  border-color: rgba(83, 99, 63, 0.32);
+  background: rgba(83, 99, 63, 0.14);
+  color: var(--moss-green);
+}
+
+.cloud-card p {
+  grid-column: 1 / -1;
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.cloud-controls {
+  display: grid;
+  gap: 8px;
+}
+
+.cloud-signin-fields,
+.cloud-action-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.cloud-card.is-signed-in .cloud-signin-fields {
+  display: none;
+}
+
+.cloud-card.is-signed-in .cloud-action-row {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.cloud-card.is-signed-in #createAccountBtn,
+.cloud-card.is-signed-in #signInBtn,
+.cloud-card.is-signed-in #resetPasswordBtn {
+  display: none;
+}
+
+.cloud-controls input {
+  height: 38px;
+}
+
+.cloud-controls button {
+  min-height: 36px;
+  padding: 0 10px;
+  border-radius: 8px;
+  background: var(--soil-brown);
+  color: #fff;
+  font-weight: 900;
+}
+
+.cloud-controls button:first-of-type,
+#syncCloudBtn {
+  background: var(--harvest-gold);
+  color: var(--soil-brown);
+}
+
+.cloud-controls button:disabled,
+.cloud-controls input:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .save-now {
@@ -373,6 +695,16 @@ select:focus {
   gap: 12px;
 }
 
+.plant-search {
+  display: grid;
+  gap: 6px;
+}
+
+.plant-search input {
+  min-height: 42px;
+  background: rgba(255, 250, 243, 0.94);
+}
+
 .plot-manager,
 .custom-plant {
   display: grid;
@@ -389,6 +721,50 @@ select:focus {
   font-weight: 900;
 }
 
+.auto-plant-note {
+  margin: -4px 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.seed-packet-panel {
+  padding: 10px;
+  border: 1px solid rgba(83, 99, 63, 0.22);
+  border-radius: 8px;
+  background: rgba(244, 239, 228, 0.62);
+}
+
+.seed-packet-panel summary {
+  cursor: pointer;
+  color: var(--soil-brown);
+  font-weight: 900;
+}
+
+.seed-packet-panel[open] {
+  display: grid;
+  gap: 12px;
+}
+
+.seed-packet-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.packet-image-status {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.seed-packet-panel textarea {
+  resize: vertical;
+  min-height: 84px;
+}
+
 .plot-tabs {
   display: grid;
   gap: 8px;
@@ -403,14 +779,14 @@ select:focus {
   padding: 9px 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fffaf1;
+  background: var(--panel);
   color: var(--ink);
   text-align: left;
 }
 
 .plot-manager .plot-tab.active {
-  border-color: rgba(109, 126, 67, 0.68);
-  background: rgba(109, 126, 67, 0.14);
+  border-color: rgba(83, 99, 63, 0.68);
+  background: rgba(83, 99, 63, 0.14);
 }
 
 .plot-manager .plot-tab span {
@@ -435,6 +811,9 @@ select:focus {
 .plant-list {
   display: grid;
   gap: 8px;
+  max-height: 390px;
+  overflow: auto;
+  padding-right: 3px;
 }
 
 .plant-option {
@@ -446,12 +825,12 @@ select:focus {
   padding: 8px 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fffaf1;
+  background: var(--panel);
 }
 
 .plant-option.active {
-  border-color: rgba(109, 126, 67, 0.68);
-  background: rgba(109, 126, 67, 0.13);
+  border-color: rgba(83, 99, 63, 0.68);
+  background: rgba(83, 99, 63, 0.13);
 }
 
 .plant-badge {
@@ -585,12 +964,13 @@ select:focus {
   place-items: center;
   min-height: 24px;
   padding: 0 9px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.9);
-  color: var(--soil-dark);
+  border-radius: 999px;
+  background: rgba(244, 239, 228, 0.82);
+  color: var(--soil-brown);
   font-size: 0.76rem;
   font-weight: 900;
   pointer-events: none;
+  box-shadow: 0 4px 14px rgba(58, 48, 40, 0.12);
 }
 
 .dimension-width {
@@ -610,8 +990,8 @@ select:focus {
   position: absolute;
   z-index: 2;
   border-radius: 999px;
-  background: rgba(248, 250, 244, 0.28);
-  outline: 1px dashed rgba(255, 255, 255, 0.58);
+  background: transparent;
+  outline: 1px dashed rgba(244, 239, 228, 0.42);
   pointer-events: none;
 }
 
@@ -675,7 +1055,7 @@ select:focus {
   z-index: 4;
   outline: 4px solid rgba(255, 255, 255, 0.92);
   box-shadow:
-    0 0 0 5px rgba(54, 65, 27, 0.72),
+    0 0 0 5px rgba(83, 99, 63, 0.72),
     0 15px 32px rgba(24, 18, 14, 0.3);
 }
 
@@ -692,7 +1072,7 @@ select:focus {
 
 .plant-editor {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) minmax(150px, 190px) auto auto;
   align-items: center;
   gap: 12px;
   padding: 12px;
@@ -708,8 +1088,22 @@ select:focus {
 }
 
 .plant-editor.active {
-  border-color: rgba(109, 126, 67, 0.58);
-  background: rgba(109, 126, 67, 0.12);
+  border-color: rgba(83, 99, 63, 0.58);
+  background: rgba(83, 99, 63, 0.12);
+}
+
+.planted-date-field {
+  display: grid;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.planted-date-field input {
+  min-height: 42px;
+  padding: 0 10px;
 }
 
 .nudge-pad {
@@ -758,12 +1152,12 @@ select:focus {
 }
 
 .insight.warning {
-  border-color: rgba(141, 71, 55, 0.36);
-  background: rgba(141, 71, 55, 0.08);
+  border-color: rgba(167, 101, 59, 0.36);
+  background: rgba(167, 101, 59, 0.08);
 }
 
 .insight.good {
-  border-color: rgba(109, 126, 67, 0.28);
+  border-color: rgba(83, 99, 63, 0.28);
 }
 
 .insight strong,
@@ -799,6 +1193,15 @@ select:focus {
   color: rgba(255, 255, 255, 0.88);
   font-weight: 900;
   text-align: center;
+}
+
+.empty-state.compact {
+  min-height: 84px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(83, 99, 63, 0.12);
+  color: var(--muted);
 }
 
 .schedule-list {
@@ -847,14 +1250,141 @@ select:focus {
   line-height: 1.35;
 }
 
+.task-group-label {
+  list-style: none;
+  grid-column: 1 / -1;
+  margin: 6px 0 -2px;
+  color: var(--moss-green);
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.schedule-item.quiet {
+  opacity: 0.72;
+}
+
 .page-list {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .calendar-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--line);
+}
+
+.calendar-controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.calendar-controls button {
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: 8px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--soil-brown);
+  font-weight: 900;
+}
+
+.calendar-title {
+  margin: -4px 0 12px;
+  color: var(--soil-brown);
+  font-family: "Bitter", Georgia, serif;
+  font-size: 1.35rem;
+  font-weight: 800;
+}
+
+.calendar-weekday {
+  min-height: 34px;
+  display: grid;
+  place-items: center;
+  background: rgba(83, 99, 63, 0.16);
+  color: var(--moss-green);
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.calendar-day {
+  min-height: 132px;
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 8px;
+  background: rgba(255, 250, 243, 0.92);
+}
+
+.calendar-day.outside {
+  background: rgba(244, 239, 228, 0.58);
+  color: rgba(58, 48, 40, 0.46);
+}
+
+.calendar-day.today {
+  box-shadow: inset 0 0 0 2px var(--harvest-gold);
+}
+
+.calendar-day-number {
+  color: var(--soil-brown);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.calendar-events {
+  display: grid;
+  gap: 5px;
+}
+
+.calendar-event {
+  display: grid;
+  gap: 2px;
+  padding: 6px;
+  border-left: 3px solid var(--moss-green);
+  border-radius: 6px;
+  background: rgba(83, 99, 63, 0.1);
+}
+
+.calendar-event strong {
+  font-size: 0.72rem;
+  line-height: 1.2;
+}
+
+.calendar-event span {
+  color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1.25;
+}
+
+.calendar-event.water {
+  border-left-color: var(--sage);
+}
+
+.calendar-event.soil {
+  border-left-color: var(--clay);
+}
+
+.calendar-event.pest {
+  border-left-color: var(--harvest-gold);
+}
+
+.calendar-event.harvest {
+  border-left-color: var(--leaf-dark);
+}
+
+.calendar-more {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
 }
 
 .month-card {
@@ -890,7 +1420,7 @@ select:focus {
   padding: 14px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: rgba(109, 126, 67, 0.1);
+  background: rgba(83, 99, 63, 0.1);
 }
 
 .chat-message {
@@ -905,7 +1435,7 @@ select:focus {
 
 .user-message {
   justify-self: end;
-  background: rgba(141, 71, 55, 0.1);
+  background: rgba(167, 101, 59, 0.1);
 }
 
 .chat-message span {
@@ -949,9 +1479,17 @@ select:focus {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .calendar-grid,
+  .context-card {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .page-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .calendar-grid {
+    grid-template-columns: repeat(7, minmax(92px, 1fr));
+    overflow-x: auto;
   }
 }
 
@@ -1004,13 +1542,37 @@ select:focus {
   }
 
   .control-grid,
+  .cloud-controls,
   .context-card,
+  .garden-manager,
   .insight-strip,
   .schedule-list,
-  .calendar-grid,
   .page-list,
   .ask-form {
     grid-template-columns: 1fr;
+  }
+
+  .onboarding-card {
+    padding: 18px;
+  }
+
+  .onboarding-row,
+  .starter-plants,
+  .seed-packet-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .calendar-grid {
+    grid-template-columns: repeat(7, minmax(92px, 1fr));
+    overflow-x: auto;
+  }
+
+  .calendar-controls {
+    justify-content: flex-start;
+  }
+
+  .calendar-day {
+    min-height: 118px;
   }
 
   .toolbar {
