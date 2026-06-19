@@ -1,9 +1,10 @@
 {
   "name": "cultivaite-garden",
-  "version": "1.0.0",
+  "version": "0.2.0",
   "private": true,
-  "description": "CultivAIte AI-powered garden planner.",
+  "description": "CultivAIte AI-assisted garden planner.",
   "scripts": {
-    "build": "mkdir -p dist && cp index.html dist/index.html"
+    "build": "mkdir -p dist && cp -R index.html manifest.webmanifest sw.js src icons dist/",
+    "check": "node --check src/standalone.js && node --check api/ask.js && node --check sw.js"
   }
 }

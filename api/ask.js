@@ -129,7 +129,7 @@ async function callOpenAIChat(systemPrompt, userPrompt, apiKey, model) {
 
 module.exports = async function handler(request, response) {
   if (request.method !== "POST") {
-    sendJson(response, 405, { error: "Use POST to ask SOL a question." });
+    sendJson(response, 405, { error: "Use POST to ask CultivAIte a question." });
     return;
   }
 
@@ -150,7 +150,7 @@ module.exports = async function handler(request, response) {
     const gardenContext = compactContext(context);
     const modelCandidates = [...new Set([process.env.OPENAI_MODEL, DEFAULT_MODEL, FALLBACK_MODEL].filter(Boolean))];
     const systemPrompt = [
-      "You are SOL, an AI gardening assistant for a web app called Sustainable, Organized Layout.",
+      "You are CultivAIte, an AI gardening assistant for a sustainable garden planning web app.",
       "Use plain, practical language for home gardeners.",
       "Base advice first on the provided garden context: ZIP, ZIP source, USDA zone, frost timing, plot dimensions, plant list, spacing, crop families, soil demand, and warnings.",
       "If the user's question includes a ZIP code that differs from the planner ZIP, prioritize the ZIP from the question and briefly say so.",
@@ -204,8 +204,6 @@ module.exports = async function handler(request, response) {
       answer
     });
   } catch (error) {
-    sendJson(response, 500, { error: error.message || "SOL AI could not answer right now." });
+    sendJson(response, 500, { error: error.message || "CultivAIte AI could not answer right now." });
   }
 };
-
-
