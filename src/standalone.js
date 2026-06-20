@@ -1195,17 +1195,77 @@ function updateSelectedPlantDate() {
   queueAutoSave();
 }
 
+function placedPlantDistance(first, second, plot) {
+  return Math.hypot((first.x - second.x) * plot.width, (first.y - second.y) * plot.length);
+}
+
+function layoutReview(plot) {
+  const placed = plot.placedPlants || [];
+  const closePairs = [];
+  const companionPairs = [];
+  const companionPairKeys = new Set();
+  const centerLanePlants = plot.width >= 7
+    ? placed.filter((plant) => Math.abs(plant.x - 0.5) < 0.095)
+    : [];
+
+  for (let firstIndex = 0; firstIndex < placed.length; firstIndex += 1) {
+    for (let secondIndex = firstIndex + 1; secondIndex < placed.length; secondIndex += 1) {
+      const first = placed[firstIndex];
+      const second = placed[secondIndex];
+      const distance = placedPlantDistance(first, second, plot);
+      const recommendedGap = Math.max(first.spacing, second.spacing) * 0.55;
+
+      if (distance < recommendedGap) closePairs.push({ first, second });
+      const companionKey = [first.id, second.id].sort().join(":");
+      if (
+        ((first.companions || []).includes(second.id) || (second.companions || []).includes(first.id)) &&
+        !companionPairKeys.has(companionKey)
+      ) {
+        companionPairs.push({ first, second, distance });
+        companionPairKeys.add(companionKey);
+      }
+    }
+  }
+
+  return { closePairs, companionPairs, centerLanePlants };
+}
+
+function placementSummary(plot) {
+  const placed = plot.placedPlants || [];
+  const zones = new Set(placed.map((plant) => plant.zone || careZoneForPlant(plant)));
+  const notes = [];
+  if (zones.has("trellis edge")) notes.push("tall crops are kept on the trellis edge");
+  if (zones.has("sprawl edge")) notes.push("wide crops have an outside edge to spread");
+  if (zones.has("beneficial border")) notes.push("flowers sit on the border for pollinator access");
+  if (zones.has("deep watering band")) notes.push("deep-water crops share a watering band");
+  if (zones.has("cool-season band")) notes.push("cool-season greens are grouped together");
+  return notes.length ? `${titleCase(notes[0])}${notes.length > 1 ? `; ${notes[1]}` : ""}.` : "Plants are grouped by mature size, water needs, and harvest access.";
+}
+
 function renderInsights(plot, assessment = assessGarden(plot)) {
-  const groups = selectedPlantObjects(plot);
-  const companionCount = groups.filter((plant) => plant.companions.some((id) => plot.selected.has(id))).length;
-  const water = groups.some((plant) => plant.water === "deep") ? "Deep watering zone on the sunny edge" : "Even watering across shallow rows";
-  const heavyFeeders = groups.filter((plant) => plant.feed === "heavy").map((plant) => plant.name);
-  const strongestWarning = assessment.warnings[0];
-  const strongestWin = assessment.wins[0] || assessment.extension.note;
+  const review = layoutReview(plot);
+  const water = selectedPlantObjects(plot).some((plant) => plant.water === "deep")
+    ? "Deep-water crops are grouped for more efficient watering."
+    : "Water needs are simple enough for one steady routine.";
+  const heavyFeeders = selectedPlantObjects(plot).filter((plant) => plant.feed === "heavy").map((plant) => plant.name);
+
+  const spaceNote = review.closePairs.length
+    ? `${review.closePairs.length} close placement${review.closePairs.length === 1 ? "" : "s"} detected. Move ${review.closePairs[0].first.name} and ${review.closePairs[0].second.name} farther apart for airflow and easier harvests.`
+    : review.centerLanePlants.length
+      ? `${review.centerLanePlants.length} plant${review.centerLanePlants.length === 1 ? " is" : "s are"} in the center access lane. Move ${review.centerLanePlants[0].name} to either side to keep the bed reachable.`
+      : assessment.density > 1.05
+        ? "The overall plan is tight. Keep pruning, watering, and disease checks on a regular schedule."
+        : "No close placements detected. Space and access look workable for watering, pruning, and weeding.";
+
+  const companionNote = review.companionPairs.length
+    ? `${review.companionPairs.length} companion connection${review.companionPairs.length === 1 ? "" : "s"} in this layout. ${review.companionPairs[0].first.name} and ${review.companionPairs[0].second.name} are a compatible pairing.`
+    : "No companion links are selected yet. Add flowers, herbs, or a compatible crop when it supports your goal.";
+
+  const careNote = `${placementSummary(plot)} ${heavyFeeders.length ? `Compost near ${heavyFeeders.slice(0, 2).join(" and ")}.` : water}`;
   const notes = [
-    ["Layout logic", `${companionCount} companion pairings, ${assessment.density > 1 ? "compressed" : "clear"} spacing, center access path, ${assessment.climate.heat}.`, "good"],
-    ["Garden check", strongestWarning || strongestWin, strongestWarning ? "warning" : "good"],
-    ["Care pattern", `${water}. ${heavyFeeders.length ? `Feed compost near ${heavyFeeders.slice(0, 2).join(" and ")}.` : strongestWin}`, "good"]
+    ["Space review", spaceNote, review.closePairs.length || review.centerLanePlants.length || assessment.density > 1.05 ? "warning" : "good"],
+    ["Companion planting", companionNote, review.companionPairs.length ? "good" : "warning"],
+    ["Why this layout", careNote, "good"]
   ];
   els.insight.innerHTML = notes.map(([title, copy, tone]) => `<div class="insight ${tone}"><strong>${title}</strong><span>${copy}</span></div>`).join("");
 }
