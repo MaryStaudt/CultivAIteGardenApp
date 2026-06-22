@@ -302,6 +302,35 @@ button {
   gap: 12px;
 }
 
+.reset-layout,
+.packet-scan-button {
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--soil-brown);
+  font-weight: 900;
+}
+
+.packet-scan-button {
+  width: 100%;
+  margin-top: 2px;
+}
+
+.packet-scan-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.zone-source {
+  display: inline-block;
+  margin-top: 5px;
+  color: var(--moss-green);
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
 .eyebrow,
 .context-label {
   display: block;
@@ -510,6 +539,70 @@ select:focus {
   gap: 14px;
 }
 
+.onboarding-progress {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.onboarding-progress li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 900;
+}
+
+.onboarding-progress span {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-size: 0.76rem;
+}
+
+.onboarding-progress li.active {
+  border-color: var(--moss-green);
+  color: var(--moss-green);
+  background: rgba(83, 99, 63, 0.1);
+}
+
+.onboarding-progress li.complete {
+  color: var(--soil-brown);
+}
+
+.onboarding-step {
+  display: none;
+  gap: 14px;
+}
+
+.onboarding-step.active {
+  display: grid;
+}
+
+.setup-step-label {
+  color: var(--clay) !important;
+  font-size: 0.8rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.setup-step-copy {
+  margin-top: -4px !important;
+  font-size: 0.92rem;
+}
+
 .onboarding-row {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -518,7 +611,7 @@ select:focus {
 
 .starter-plants {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   margin: 0;
   padding: 12px;
@@ -559,9 +652,16 @@ select:focus {
 
 .onboarding-actions {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.onboarding-actions-main {
+  display: flex;
+  gap: 10px;
+  margin-left: auto;
 }
 
 .onboarding-actions button {
@@ -575,6 +675,10 @@ select:focus {
   background: var(--panel);
   border: 1px solid var(--line);
   color: var(--soil-brown);
+}
+
+.onboarding-actions-main button[hidden] {
+  display: none;
 }
 
 .onboarding-actions button[type="submit"] {
@@ -1230,6 +1334,28 @@ select:focus {
   text-decoration: line-through;
 }
 
+.task-item {
+  grid-template-columns: 68px minmax(0, 1fr) auto;
+}
+
+.task-toggle {
+  align-self: center;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--moss-green);
+  font-size: 0.74rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.task-item.complete .task-toggle {
+  border-color: rgba(83, 99, 63, 0.4);
+  background: rgba(83, 99, 63, 0.14);
+}
+
 .schedule-date {
   color: var(--leaf-dark);
   font-size: 0.76rem;
@@ -1580,6 +1706,10 @@ select:focus {
     flex-direction: column;
   }
 
+  .reset-layout {
+    width: 100%;
+  }
+
   .legend {
     justify-content: flex-start;
   }
@@ -1629,6 +1759,14 @@ select:focus {
 
   .dimension-length {
     left: 2px;
+  }
+
+  .task-item {
+    grid-template-columns: 1fr auto;
+  }
+
+  .task-item .schedule-date {
+    grid-column: 1 / -1;
   }
 }
   font-family: var(--font-ui);
