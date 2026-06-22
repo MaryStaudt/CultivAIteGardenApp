@@ -219,6 +219,92 @@ button {
   padding: 24px;
 }
 
+.home-library {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 14px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 250, 243, 0.95);
+  box-shadow: var(--shadow);
+}
+
+.library-new-button {
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--harvest-gold);
+  border-radius: 8px;
+  background: var(--harvest-gold);
+  color: var(--soil-brown);
+  font-weight: 900;
+}
+
+.garden-library {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.garden-library-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 88px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--ink);
+  text-align: left;
+}
+
+.garden-library-card.active {
+  border-color: rgba(83, 99, 63, 0.62);
+  background: rgba(83, 99, 63, 0.1);
+}
+
+.garden-library-year {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 8px;
+  background: rgba(231, 151, 41, 0.16);
+  color: var(--soil-brown);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.garden-library-main {
+  min-width: 0;
+}
+
+.garden-library-main strong,
+.garden-library-main small {
+  display: block;
+}
+
+.garden-library-main strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.garden-library-main small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.garden-library-open {
+  color: var(--moss-green);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
 .trust-card {
   grid-column: 1 / -1;
   padding: 18px;
@@ -914,6 +1000,7 @@ select:focus {
 
 .plant-list {
   display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
   gap: 8px;
   max-height: 390px;
   overflow: auto;
@@ -922,11 +1009,12 @@ select:focus {
 
 .plant-option {
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) auto;
-  align-items: center;
+  grid-template-columns: 52px minmax(0, 1fr);
+  align-items: start;
+  align-content: start;
   gap: 10px;
-  min-height: 56px;
-  padding: 8px 10px;
+  min-height: 138px;
+  padding: 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--panel);
@@ -937,15 +1025,15 @@ select:focus {
   background: rgba(83, 99, 63, 0.13);
 }
 
-.plant-badge {
+.plant-art {
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  color: white;
-  font-weight: 900;
-  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+  width: 52px;
+  height: 52px;
+  border: 1px solid color-mix(in srgb, var(--plant-color) 38%, var(--line));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--plant-color) 16%, var(--panel));
+  font-size: 2rem;
 }
 
 .plant-meta {
@@ -956,8 +1044,6 @@ select:focus {
 .plant-meta span {
   display: block;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .plant-meta strong {
@@ -968,11 +1054,13 @@ select:focus {
   color: var(--muted);
   font-size: 0.76rem;
   margin-top: 2px;
+  line-height: 1.35;
 }
 
 .stepper {
   display: grid;
-  grid-template-columns: 28px 28px 28px;
+  grid-column: 1 / -1;
+  grid-template-columns: 32px 28px minmax(0, 1fr);
   align-items: center;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -980,8 +1068,8 @@ select:focus {
 }
 
 .stepper button {
-  width: 28px;
-  height: 30px;
+  width: 32px;
+  height: 34px;
   background: #f7f8f5;
   color: var(--ink);
   font-weight: 900;
@@ -992,6 +1080,15 @@ select:focus {
   color: var(--ink);
   font-size: 0.82rem;
   font-weight: 900;
+}
+
+.stepper .plant-add {
+  width: 100%;
+  padding: 0 8px;
+  border-left: 1px solid var(--line);
+  background: rgba(83, 99, 63, 0.12);
+  color: var(--moss-green);
+  font-size: 0.76rem;
 }
 
 .legend {
@@ -1412,6 +1509,34 @@ select:focus {
   justify-content: flex-end;
 }
 
+.calendar-view-switch {
+  display: inline-grid;
+  grid-template-columns: repeat(3, auto);
+  justify-content: start;
+  gap: 4px;
+  width: max-content;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(244, 239, 228, 0.72);
+}
+
+.calendar-view-switch button {
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.calendar-view-switch button.active {
+  background: var(--panel);
+  color: var(--soil-brown);
+  box-shadow: 0 2px 8px rgba(58, 48, 40, 0.1);
+}
+
 .calendar-controls button {
   min-height: 38px;
   padding: 0 12px;
@@ -1448,6 +1573,7 @@ select:focus {
   gap: 8px;
   padding: 8px;
   background: rgba(255, 250, 243, 0.92);
+  cursor: pointer;
 }
 
 .calendar-day.outside {
@@ -1457,6 +1583,28 @@ select:focus {
 
 .calendar-day.today {
   box-shadow: inset 0 0 0 2px var(--harvest-gold);
+}
+
+.calendar-grid.view-week .calendar-day {
+  min-height: 260px;
+}
+
+.calendar-grid.view-day {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.calendar-grid.view-day .calendar-day {
+  min-height: 410px;
+  padding: 16px;
+}
+
+.calendar-grid.view-day .calendar-day-number {
+  font-family: var(--font-headline);
+  font-size: 1.5rem;
+}
+
+.calendar-grid.view-day .calendar-event {
+  padding: 10px;
 }
 
 .calendar-day-number {
