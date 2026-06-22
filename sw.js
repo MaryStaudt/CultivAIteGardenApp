@@ -1,4 +1,4 @@
-const CACHE_NAME = "cultivaite-pwa-v2";
+const CACHE_NAME = "cultivaite-pwa-v4";
 const APP_SHELL = [
   "/",
   "/index.html",
@@ -6,7 +6,7 @@ const APP_SHELL = [
   "/icons/icon-192.png",
   "/icons/icon-512.png",
   "/icons/apple-touch-icon.png",
-  "/icons/cultivaite-logo.png",
+  "/icons/cultivaite-beet-mark-web.png",
   "/src/styles.css",
   "/src/standalone.js",
   "/sw.js"
