@@ -130,6 +130,16 @@
               <strong id="homeSaveText">Ready</strong>
             </div>
           </section>
+          <section class="home-library" aria-label="Garden library">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Garden library</p>
+                <h2>Every growing season, in one place</h2>
+              </div>
+              <button id="homeNewGardenBtn" class="library-new-button" type="button">New garden</button>
+            </div>
+            <div class="garden-library" id="gardenLibrary"></div>
+          </section>
           <section class="trust-card" aria-label="CultivAIte guidance note">
             <p class="eyebrow">Guidance note</p>
             <h3>Use CultivAIte as a smart starting point.</h3>
@@ -162,6 +172,7 @@
           <div class="garden-actions">
             <button id="newGardenBtn" type="button">New</button>
             <button id="renameGardenBtn" type="button">Rename</button>
+            <button id="archiveGardenBtn" type="button">Archive</button>
             <button id="deleteGardenBtn" type="button">Delete</button>
           </div>
         </section>
@@ -433,6 +444,11 @@
               <button id="calendarTodayBtn" type="button">Today</button>
               <button id="calendarNextBtn" type="button">Next</button>
             </div>
+          </div>
+          <div class="calendar-view-switch" aria-label="Calendar view">
+            <button type="button" data-calendar-view="month">Month</button>
+            <button type="button" data-calendar-view="week">Week</button>
+            <button type="button" data-calendar-view="day">Day</button>
           </div>
           <div class="calendar-title" id="calendarTitle">Month Year</div>
           <div class="calendar-grid" id="calendarGrid"></div>
