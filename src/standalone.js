@@ -173,6 +173,7 @@ const state = {
 let activeDrag = null;
 let saveTimer = null;
 let cloudTimer = null;
+let packetScanData = null;
 const cloudState = {
   ready: false,
   loading: false,
@@ -216,6 +217,7 @@ const els = {
   schedule: document.querySelector("#scheduleList"),
   insight: document.querySelector("#insightStrip"),
   shuffle: document.querySelector("#shuffleBtn"),
+  resetLayout: document.querySelector("#resetLayoutBtn"),
   export: document.querySelector("#exportBtn"),
   customForm: document.querySelector("#customPlantForm"),
   customName: document.querySelector("#customPlantName"),
@@ -223,6 +225,7 @@ const els = {
   customSpacing: document.querySelector("#customPlantSpacing"),
   packetImage: document.querySelector("#packetImageInput"),
   packetImageStatus: document.querySelector("#packetImageStatus"),
+  scanPacket: document.querySelector("#scanPacketBtn"),
   packetSun: document.querySelector("#packetSunInput"),
   packetSpacing: document.querySelector("#packetSpacingInput"),
   packetGerm: document.querySelector("#packetGermInput"),
@@ -1058,6 +1061,12 @@ function generateLayout() {
   render();
 }
 
+function resetRecommendedLayout() {
+  state.selectedPlantUid = "";
+  generateLayout();
+  setSaveStatus("Recommended layout restored");
+}
+
 function choosePlantPlacement(plant, plot, assessment, plantIndex, plantNumber) {
   const targetLane = strategicLane(plant, plantIndex, assessment, plot);
   const candidates = placementCandidates(plant, plot, targetLane, plantIndex, plantNumber);
@@ -1622,12 +1631,13 @@ function renderPages() {
 
 function renderTaskPage() {
   const plot = activePlot();
-  const tasks = scheduleTasks(plot, climateForZip(els.zip.value)).slice(0, 42);
+  const tasks = scheduleTasks(plot, climateForZip(els.zip.value));
   const today = new Date();
   const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 12);
   const weekEnd = new Date(todayStart);
   weekEnd.setDate(todayStart.getDate() + 7);
   const groups = [
+    ["Earlier this season", tasks.filter((task) => task.date < todayStart)],
     ["Today", tasks.filter((task) => isoDate(task.date) === isoDate(todayStart))],
     ["This week", tasks.filter((task) => task.date > todayStart && task.date <= weekEnd)],
     ["Later", tasks.filter((task) => task.date > weekEnd).slice(0, 18)]
@@ -1638,9 +1648,10 @@ function renderTaskPage() {
       ${groupTasks.length ? groupTasks.map((task) => {
       const complete = state.completedTasks.includes(task.key);
       return `
-        <li class="schedule-item${complete ? " complete" : ""}">
+        <li class="schedule-item task-item${complete ? " complete" : ""}">
           <time class="schedule-date">${formatDate(task.date)}</time>
           <span class="schedule-copy"><strong>${task.title}</strong><span>${task.copy}</span></span>
+          <button class="task-toggle" type="button" data-task-key="${task.key}" aria-pressed="${complete}" aria-label="Mark ${task.title} ${complete ? "not done" : "done"}">${complete ? "Done" : "Mark done"}</button>
         </li>
       `;
       }).join("") : `<li class="schedule-item quiet"><time class="schedule-date">Clear</time><span class="schedule-copy"><strong>No tasks</strong><span>Nothing scheduled for this window.</span></span></li>`}
@@ -1829,6 +1840,15 @@ function markNextTaskDone() {
   const task = scheduleTasks(activePlot(), climateForZip(els.zip.value)).find((item) => !state.completedTasks.includes(item.key));
   if (!task) return;
   state.completedTasks.push(task.key);
+  renderTaskPage();
+  queueAutoSave();
+}
+
+function toggleTaskComplete(taskKey) {
+  if (!taskKey) return;
+  const currentIndex = state.completedTasks.indexOf(taskKey);
+  if (currentIndex === -1) state.completedTasks.push(taskKey);
+  else state.completedTasks.splice(currentIndex, 1);
   renderTaskPage();
   queueAutoSave();
 }
@@ -2022,6 +2042,88 @@ function packetDetailsFromForm() {
   return { daysToMaturity, daysToGerminate, spacing, sun, method, depth, notes, imageName };
 }
 
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error("CultivAIte could not read that photo."));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function preparePacketImage(file) {
+  if (!file?.type?.startsWith("image/")) throw new Error("Choose an image of the back of a seed packet.");
+  if (file.size > 10 * 1024 * 1024) throw new Error("Choose a photo smaller than 10 MB.");
+  const original = await fileToDataUrl(file);
+  const image = new Image();
+  await new Promise((resolve, reject) => {
+    image.onload = resolve;
+    image.onerror = () => reject(new Error("CultivAIte could not open that photo."));
+    image.src = original;
+  });
+  const longestSide = Math.max(image.naturalWidth, image.naturalHeight);
+  const scale = Math.min(1, 1200 / longestSide);
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+  canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+  const context = canvas.getContext("2d");
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL("image/jpeg", 0.8);
+}
+
+function applyPacketScan(details) {
+  const sun = ["full", "part"].includes(details.sun) ? details.sun : "";
+  const method = ["direct", "indoor", "transplant"].includes(details.plantingMethod) ? details.plantingMethod : "";
+  const spacing = Number(details.spacingFeet);
+  const germination = Number(details.daysToGerminate);
+  const maturity = Number(details.daysToMaturity);
+  if (!els.customName.value.trim() && details.plantName) els.customName.value = details.plantName;
+  if (sun) els.packetSun.value = sun;
+  if (Number.isFinite(spacing) && spacing > 0) els.packetSpacing.value = spacing;
+  if (Number.isFinite(germination) && germination > 0) els.packetGerm.value = Math.round(germination);
+  if (Number.isFinite(maturity) && maturity > 0) els.packetMaturity.value = Math.round(maturity);
+  if (details.plantingDepth) els.packetDepth.value = details.plantingDepth;
+  if (method) els.packetMethod.value = method;
+  if (details.notes) els.packetNotes.value = details.notes;
+}
+
+async function scanSeedPacket() {
+  const file = els.packetImage?.files?.[0];
+  if (!file) {
+    if (els.packetImageStatus) els.packetImageStatus.textContent = "Choose a seed-packet photo first.";
+    return;
+  }
+  try {
+    if (els.scanPacket) {
+      els.scanPacket.disabled = true;
+      els.scanPacket.textContent = "Reading photo...";
+    }
+    if (els.packetImageStatus) els.packetImageStatus.textContent = "Reading the packet and filling in the editable details...";
+    const imageDataUrl = await preparePacketImage(file);
+    const response = await fetch("/api/seed-packet", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ imageDataUrl, filename: file.name })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.details) throw new Error(data.error || "CultivAIte could not read that packet.");
+    packetScanData = data.details;
+    applyPacketScan(packetScanData);
+    if (els.packetImageStatus) {
+      const confidence = packetScanData.confidence ? ` ${packetScanData.confidence} confidence.` : "";
+      els.packetImageStatus.textContent = `Packet details filled in. Review them before adding to the plot.${confidence}`;
+    }
+    queueAutoSave();
+  } catch (error) {
+    if (els.packetImageStatus) els.packetImageStatus.textContent = `${error.message || "CultivAIte could not read that packet."} You can enter the details manually.`;
+  } finally {
+    if (els.scanPacket) {
+      els.scanPacket.disabled = false;
+      els.scanPacket.textContent = "Read packet photo";
+    }
+  }
+}
+
 function applyPacketDetails(profile, packet) {
   if (!packet) return profile;
   return {
@@ -2036,6 +2138,7 @@ function applyPacketDetails(profile, packet) {
 }
 
 function resetPacketForm() {
+  packetScanData = null;
   [els.packetSun, els.packetMethod].forEach((field) => {
     if (field) field.value = "";
   });
@@ -2111,6 +2214,7 @@ els.zip.addEventListener("input", render);
 els.zip.addEventListener("change", render);
 els.addPlot.addEventListener("click", addPlot);
 els.shuffle.addEventListener("click", generateLayout);
+if (els.resetLayout) els.resetLayout.addEventListener("click", resetRecommendedLayout);
 els.export.addEventListener("click", exportPlan);
 els.customForm.addEventListener("submit", addCustomPlant);
 els.navButtons.forEach((button) => {
@@ -2198,6 +2302,7 @@ if (els.onboardAlreadyPlanted) els.onboardAlreadyPlanted.addEventListener("chang
 if (els.plantSearch) els.plantSearch.addEventListener("input", renderPlantPicker);
 if (els.packetImage) {
   els.packetImage.addEventListener("change", () => {
+    packetScanData = null;
     const file = els.packetImage.files?.[0];
     if (els.packetImageStatus) {
       els.packetImageStatus.textContent = file ? `Attached: ${file.name}` : "No packet photo attached";
@@ -2205,12 +2310,19 @@ if (els.packetImage) {
     queueAutoSave();
   });
 }
+if (els.scanPacket) els.scanPacket.addEventListener("click", scanSeedPacket);
 els.plannerForm.addEventListener("submit", (event) => {
   event.preventDefault();
   saveCurrentPlan();
 });
 els.saveNow.addEventListener("click", saveCurrentPlan);
 els.markTasks.addEventListener("click", markNextTaskDone);
+if (els.taskPageList) {
+  els.taskPageList.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-task-key]");
+    if (button) toggleTaskComplete(button.dataset.taskKey);
+  });
+}
 els.askForm.addEventListener("submit", askSol);
 if (els.plantedDate) els.plantedDate.addEventListener("change", updateSelectedPlantDate);
 els.plantEditor.addEventListener("click", (event) => {
