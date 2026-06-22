@@ -175,6 +175,10 @@
             <button id="archiveGardenBtn" type="button">Archive</button>
             <button id="deleteGardenBtn" type="button">Delete</button>
           </div>
+          <label class="garden-cover-upload">
+            <span>Cover photo</span>
+            <input id="gardenCoverInput" type="file" accept="image/*" capture="environment" />
+          </label>
         </section>
 
         <form class="control-grid" id="plannerForm">
@@ -426,7 +430,10 @@
               <p class="eyebrow">Work list</p>
               <h2>Tasks</h2>
             </div>
-            <button id="markTasksBtn" type="button">Mark next task done</button>
+            <div class="task-page-actions">
+              <button id="addTaskBtn" type="button">Add task</button>
+              <button id="markTasksBtn" type="button">Mark next task done</button>
+            </div>
           </div>
           <ol class="schedule-list page-list" id="taskPageList"></ol>
         </section>
@@ -462,6 +469,7 @@
               <p class="eyebrow">Ask CultivAIte</p>
               <h2>Garden assistant</h2>
             </div>
+            <button id="readResponseBtn" class="icon-button" type="button" title="Read latest answer aloud" aria-label="Read latest answer aloud" disabled>🔊</button>
           </div>
           <div class="trust-card compact" aria-label="Ask CultivAIte guidance note">
             <p><strong>Guidance note:</strong> CultivAIte answers from your garden plan, USDA zone, and extension-style guidance. Verify pesticide, safety, and highly local decisions with product labels or local extension resources.</p>
@@ -469,11 +477,37 @@
           <div class="chat-window" id="chatWindow"></div>
           <form class="ask-form" id="askForm">
             <input id="askInput" placeholder="Ask about watering, pests, spacing, or what to plant next" />
+            <button id="voiceAskBtn" class="voice-ask-button" type="button" title="Ask by voice" aria-label="Ask by voice">🎙</button>
             <button type="submit">Ask</button>
           </form>
         </section>
       </section>
     </main>
+
+    <dialog class="task-dialog" id="customTaskDialog">
+      <form id="customTaskForm" method="dialog">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Personal reminder</p>
+            <h2>Add a task</h2>
+          </div>
+          <button id="closeTaskDialogBtn" class="icon-button" type="button" aria-label="Close">×</button>
+        </div>
+        <label>
+          Task
+          <input id="customTaskTitle" required maxlength="100" placeholder="Example: Pick up compost" />
+        </label>
+        <label>
+          Date
+          <input id="customTaskDate" type="date" required />
+        </label>
+        <label>
+          Notes
+          <textarea id="customTaskNotes" rows="3" maxlength="280" placeholder="Optional details"></textarea>
+        </label>
+        <button type="submit">Save task</button>
+      </form>
+    </dialog>
 
     <script src="./src/standalone.js"></script>
   </body>
