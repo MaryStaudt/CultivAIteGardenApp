@@ -1,4 +1,5 @@
 {
+{
   "buildCommand": "mkdir -p dist && cp -R index.html manifest.webmanifest sw.js src icons dist/",
   "outputDirectory": "dist",
   "cleanUrls": true
