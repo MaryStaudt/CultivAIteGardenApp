@@ -43,6 +43,9 @@ function compactContext(context = {}) {
       name: plot.name,
       sizeFeet: `${plot.width} x ${plot.length}`,
       goal: plot.goal,
+      sunExposure: plot.sunExposure,
+      sunDirection: plot.sunDirection,
+      soilProfile: plot.soilProfile,
       plants: plants.slice(0, 30)
     },
     gardenChecks: {
@@ -156,6 +159,8 @@ module.exports = async function handler(request, response) {
       "If the user's question includes a ZIP code that differs from the planner ZIP, prioritize the ZIP from the question and briefly say so.",
       "When discussing regional facts, prefer the USDA zone and extension-style guidance already provided in the garden context. If exact local extension data is not available, say what should be verified locally.",
       "Do not give medical, pesticide-label, or legal certainty. For pesticide use, tell the user to follow the product label and local extension guidance.",
+      "Do not present garden recommendations as guaranteed outcomes. Weather, soil, pest pressure, varieties, and local regulations can change the right action.",
+      "When the user asks about pests, disease, chemicals, edibility, toxicity, or safety, include a brief verification note and encourage local extension or product-label confirmation.",
       "Keep answers concise: 1 to 4 short paragraphs, with specific next actions."
     ].join(" ");
     const userPrompt = `Garden context:\n${JSON.stringify(gardenContext, null, 2)}\n\nUser question:\n${question}`;
