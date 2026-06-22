@@ -236,6 +236,7 @@
           <div>
             <span class="context-label">Growing context</span>
             <strong id="zoneText">Zone 6a · Last frost Apr 24</strong>
+            <a class="zone-source" href="https://planthardiness.ars.usda.gov/" target="_blank" rel="noreferrer">Check USDA map</a>
           </div>
           <div>
             <span class="context-label">Plan density</span>
@@ -278,6 +279,7 @@
               <input id="packetImageInput" type="file" accept="image/*" capture="environment" />
               <span id="packetImageStatus" class="packet-image-status">No packet photo attached</span>
             </label>
+            <button id="scanPacketBtn" class="packet-scan-button" type="button">Read packet photo</button>
             <div class="seed-packet-grid">
               <label>
                 Sun
@@ -361,6 +363,7 @@
             <span><i class="part"></i> part sun</span>
             <span><i class="shade"></i> shade</span>
           </div>
+          <button id="resetLayoutBtn" class="reset-layout" type="button">Reset layout</button>
         </div>
         <div class="plot-wrap">
           <div class="dimension-label dimension-width" id="widthLabel">12 ft wide</div>
