@@ -92,6 +92,38 @@ const PLANT_STRATEGY = {
   cabbage: { family: "brassica", height: "medium", feed: "heavy", cropType: "leaf", pest: "Give airflow and keep it easy to inspect for caterpillars." }
 };
 
+const PLANTING_GUIDANCE = {
+  tomato: { depth: "6-8 in deep", waterBand: "steady" },
+  "cherry-tomato": { depth: "6-8 in deep", waterBand: "steady" },
+  basil: { depth: "1/4 in seed", waterBand: "steady" },
+  pepper: { depth: "same depth as pot", waterBand: "steady" },
+  eggplant: { depth: "same depth as pot", waterBand: "steady" },
+  lettuce: { depth: "1/8 in seed", waterBand: "even" },
+  kale: { depth: "1/4 in seed", waterBand: "even" },
+  "swiss-chard": { depth: "1/2 in seed", waterBand: "even" },
+  arugula: { depth: "1/4 in seed", waterBand: "even" },
+  carrot: { depth: "1/4 in seed", waterBand: "light" },
+  beet: { depth: "1/2 in seed", waterBand: "even" },
+  onion: { depth: "1/2 in seed or 1 in sets", waterBand: "light" },
+  garlic: { depth: "2 in deep", waterBand: "light" },
+  cucumber: { depth: "1 in seed", waterBand: "deep" },
+  zucchini: { depth: "1 in seed", waterBand: "deep" },
+  "summer-squash": { depth: "1 in seed", waterBand: "deep" },
+  pumpkin: { depth: "1 in seed", waterBand: "deep" },
+  marigold: { depth: "1/4 in seed", waterBand: "light" },
+  nasturtium: { depth: "1/2 in seed", waterBand: "light" },
+  calendula: { depth: "1/4 in seed", waterBand: "light" },
+  spinach: { depth: "1/2 in seed", waterBand: "even" },
+  parsley: { depth: "1/4 in seed", waterBand: "steady" },
+  cilantro: { depth: "1/4 in seed", waterBand: "even" },
+  dill: { depth: "1/4 in seed", waterBand: "even" },
+  radish: { depth: "1/2 in seed", waterBand: "even" },
+  bean: { depth: "1 in seed", waterBand: "even" },
+  pea: { depth: "1 in seed", waterBand: "even" },
+  broccoli: { depth: "same depth as pot", waterBand: "even" },
+  cabbage: { depth: "same depth as pot", waterBand: "even" }
+};
+
 const COMPANION_WARNINGS = [
   { plants: ["tomato", "pepper"], note: "Tomatoes and peppers share a crop family, so rotate this bed next season to reduce disease pressure." },
   { plants: ["tomato", "basil"], note: "Tomatoes and basil are paired, so CultivAIte keeps basil close enough for companion value and harvesting." },
@@ -680,12 +712,21 @@ function selectedPlantObjects(plot = activePlot()) {
 }
 
 function strategyForPlant(plant) {
-  return PLANT_STRATEGY[plant.id] || {
+  const strategy = PLANT_STRATEGY[plant.id] || {
     family: "mixed",
     height: plant.spacing >= 2.5 ? "wide" : plant.spacing >= 1.8 ? "medium" : "low",
     feed: plant.spacing >= 2 ? "heavy" : "medium",
     cropType: plant.sun === "part" ? "leaf" : "mixed",
     pest: "Keep spacing open for airflow and easy inspection."
+  };
+  const guide = PLANTING_GUIDANCE[plant.id] || {
+    depth: "follow the seed packet",
+    waterBand: plant.water || "even"
+  };
+  return {
+    ...strategy,
+    ...guide,
+    depth: plant.packet?.depth || guide.depth
   };
 }
 
@@ -955,33 +996,122 @@ function generateLayout() {
   const items = selectedPlantObjects(plot).sort((a, b) => {
     return layoutPriority(a) - layoutPriority(b);
   });
-  let index = 0;
 
   plot.placedPlants = [];
   items.forEach((plant, plantIndex) => {
     for (let i = 0; i < plant.qty; i += 1) {
-      const companionOffset = (plant.companions || []).some((id) => plot.selected.has(id)) ? -0.035 : 0.035;
-      const compact = plot.goal === "compact" ? 0.86 : plot.goal === "pollinator" && plant.id === "marigold" ? 1.2 : 1;
-      const clearPathWidth = plot.width >= 7 ? 2 : 1;
-      const usableWidth = Math.max(2, plot.width - clearPathWidth);
-      const columns = Math.max(2, Math.floor(usableWidth / Math.max(plant.spacing * compact, 0.7)));
-      const row = Math.floor(i / columns);
-      const col = i % columns;
-      const lane = strategicLane(plant, plantIndex, assessment) + companionOffset;
-      const wave = Math.sin((index + plantIndex) * 1.7) * 0.035;
-      const rawX = (col + 0.55) / columns;
-      const sideOffset = layoutSideOffset(plant, plantIndex);
-      const x = keepOutOfPath(clamp(rawX + sideOffset + wave, 0.08, 0.92), plant);
-      const yBase = (row + 0.8) / Math.max(2.2, Math.ceil(plant.qty / columns) + 1.4);
-      const y = clamp(lane * 0.72 + yBase * 0.22, 0.1, 0.9);
-      const sizeFt = Math.max(1, plant.spacing * (plot.goal === "compact" ? 0.84 : 1));
-      plot.placedPlants.push({ ...plant, uid: `${plot.id}-${plant.id}-${i}`, x, y, sizeFt, zone: careZoneForPlant(plant) });
-      index += 1;
+      const placement = choosePlantPlacement(plant, plot, assessment, plantIndex, i);
+      plot.placedPlants.push({
+        ...plant,
+        uid: `${plot.id}-${plant.id}-${i}`,
+        x: placement.x,
+        y: placement.y,
+        sizeFt: Math.max(1, plant.spacing * (plot.goal === "compact" ? 0.84 : 1)),
+        zone: careZoneForPlant(plant),
+        crowded: placement.crowded,
+        placementReasons: placement.reasons
+      });
     }
   });
 
-  spreadOverlaps(plot);
   render();
+}
+
+function choosePlantPlacement(plant, plot, assessment, plantIndex, plantNumber) {
+  const targetLane = strategicLane(plant, plantIndex, assessment);
+  const candidates = placementCandidates(plant, plot, targetLane, plantIndex, plantNumber);
+  const scored = candidates.map((candidate) => ({
+    ...candidate,
+    score: placementScore(candidate, plant, plot, targetLane)
+  })).sort((first, second) => first.score - second.score);
+  const chosen = scored[0] || { x: 0.15, y: targetLane, score: 0 };
+  const nearest = nearestPlacedPlant(chosen, plant, plot);
+  const crowded = Boolean(nearest && nearest.distance < recommendedPlantGap(plant, nearest.plant));
+  return {
+    ...chosen,
+    crowded,
+    reasons: placementReasons(plant, plot, crowded)
+  };
+}
+
+function placementCandidates(plant, plot, targetLane, plantIndex, plantNumber) {
+  const candidates = [];
+  const columns = Math.max(7, Math.min(18, Math.round(plot.width * 1.35)));
+  const rows = Math.max(8, Math.min(24, Math.round(plot.length * 1.1)));
+  const offset = ((plantIndex + plantNumber * 3) % 7) / 100;
+
+  for (let row = 0; row < rows; row += 1) {
+    for (let column = 0; column < columns; column += 1) {
+      const rawX = (column + 0.5) / columns;
+      const rawY = (row + 0.5) / rows;
+      const x = keepOutOfPath(clamp(rawX + (column % 2 ? offset : -offset), 0.06, 0.94), plant);
+      candidates.push({ x, y: rawY, laneDistance: Math.abs(rawY - targetLane) });
+    }
+  }
+
+  return candidates;
+}
+
+function placementScore(candidate, plant, plot, targetLane) {
+  let score = candidate.laneDistance * 24;
+  const placed = plot.placedPlants || [];
+
+  placed.forEach((existing) => {
+    const distance = placedPlantDistance(candidate, existing, plot);
+    const requiredGap = recommendedPlantGap(plant, existing);
+    const companions = areCompanions(plant, existing);
+    const bothHeavy = plant.feed === "heavy" && existing.feed === "heavy";
+    const sameWater = plant.water === existing.water;
+
+    if (distance < requiredGap) score += 20000 + (requiredGap - distance) * 2000;
+    else if (companions) score += Math.abs(distance - Math.max(plant.spacing, existing.spacing) * 1.35) * 5;
+    else if (sameWater && distance < Math.max(plant.spacing, existing.spacing) * 2.8) score -= 4;
+    else if (!sameWater && distance < Math.max(plant.spacing, existing.spacing) * 1.4) score += 16;
+
+    if (bothHeavy && distance < Math.max(plant.spacing, existing.spacing) * 2.5) score += 24;
+    if (plant.feed === "soil-builder" && existing.feed === "heavy" && distance < Math.max(plant.spacing, existing.spacing) * 3) score -= 8;
+    if (plant.sun === "part" && existing.height === "tall" && distance > 1 && distance < 3.5) score -= 7;
+    if (plant.sun === "full" && existing.height === "tall" && distance < Math.max(plant.spacing, existing.spacing) * 1.5) score += 12;
+  });
+
+  if (plot.goal === "pollinator" && plant.family === "flower") score -= 8;
+  if (plot.goal === "lowWater" && plant.water === "deep") score += 18;
+  if (plot.goal === "compact") score -= 2;
+  return score;
+}
+
+function areCompanions(first, second) {
+  return (first.companions || []).includes(second.id) || (second.companions || []).includes(first.id);
+}
+
+function recommendedPlantGap(first, second) {
+  const base = (first.spacing + second.spacing) / 2;
+  if (areCompanions(first, second)) return base * 0.7;
+  if (first.feed === "heavy" && second.feed === "heavy") return base * 0.95;
+  return base * 0.8;
+}
+
+function nearestPlacedPlant(candidate, plant, plot) {
+  let nearest = null;
+  (plot.placedPlants || []).forEach((existing) => {
+    const distance = placedPlantDistance(candidate, existing, plot);
+    if (!nearest || distance < nearest.distance) nearest = { plant: existing, distance };
+  });
+  return nearest;
+}
+
+function placementReasons(plant, plot, crowded) {
+  const reasons = [
+    plant.sun === "part" ? "part-sun band" : "full-sun exposure",
+    `${plant.spacing} ft spacing`,
+    `${plant.depth || "seed-packet"} planting depth`,
+    `${plant.water} water band`
+  ];
+  if (plant.feed === "heavy") reasons.push("separated from other heavy feeders");
+  if (plant.feed === "soil-builder") reasons.push("soil-supporting rotation crop");
+  if ((plant.companions || []).some((id) => plot.selected.has(id))) reasons.push("compatible crop nearby");
+  if (crowded) reasons.push("needs more room in this plot");
+  return reasons;
 }
 
 function layoutPriority(plant) {
@@ -1122,7 +1252,7 @@ function renderPlantEditor() {
   const disabled = !plant;
   if (els.selectedPlantText) {
     els.selectedPlantText.textContent = plant
-      ? `${plant.name} · ${(plant.x * activePlot().width).toFixed(1)} ft across, ${(plant.y * activePlot().length).toFixed(1)} ft down · ${plant.zone || careZoneForPlant(plant)}`
+      ? `${plant.name} · ${plant.zone || careZoneForPlant(plant)} · ${plant.sun === "full" ? "full sun" : "part sun"} · ${plant.spacing} ft spacing · ${plant.depth || "follow seed packet"} deep · ${plant.water} water`
       : "Tap a plant to edit it";
   }
   if (els.plantedDate) {
@@ -1204,6 +1334,7 @@ function layoutReview(plot) {
   const closePairs = [];
   const companionPairs = [];
   const companionPairKeys = new Set();
+  const crowdedPlants = placed.filter((plant) => plant.crowded);
   const centerLanePlants = plot.width >= 7
     ? placed.filter((plant) => Math.abs(plant.x - 0.5) < 0.095)
     : [];
@@ -1217,28 +1348,29 @@ function layoutReview(plot) {
 
       if (distance < recommendedGap) closePairs.push({ first, second });
       const companionKey = [first.id, second.id].sort().join(":");
-      if (
-        ((first.companions || []).includes(second.id) || (second.companions || []).includes(first.id)) &&
-        !companionPairKeys.has(companionKey)
-      ) {
+      if (areCompanions(first, second) && !companionPairKeys.has(companionKey)) {
         companionPairs.push({ first, second, distance });
         companionPairKeys.add(companionKey);
       }
     }
   }
 
-  return { closePairs, companionPairs, centerLanePlants };
+  return { closePairs, companionPairs, centerLanePlants, crowdedPlants };
 }
 
 function placementSummary(plot) {
   const placed = plot.placedPlants || [];
   const zones = new Set(placed.map((plant) => plant.zone || careZoneForPlant(plant)));
+  const heavyCount = placed.filter((plant) => plant.feed === "heavy").length;
+  const soilBuilders = placed.filter((plant) => plant.feed === "soil-builder").length;
   const notes = [];
   if (zones.has("trellis edge")) notes.push("tall crops are kept on the trellis edge");
   if (zones.has("sprawl edge")) notes.push("wide crops have an outside edge to spread");
   if (zones.has("beneficial border")) notes.push("flowers sit on the border for pollinator access");
   if (zones.has("deep watering band")) notes.push("deep-water crops share a watering band");
   if (zones.has("cool-season band")) notes.push("cool-season greens are grouped together");
+  if (heavyCount > 1) notes.push("heavy feeders are spaced apart to reduce root competition");
+  if (soilBuilders) notes.push("legumes provide soil-supporting rotation value");
   return notes.length ? `${titleCase(notes[0])}${notes.length > 1 ? `; ${notes[1]}` : ""}.` : "Plants are grouped by mature size, water needs, and harvest access.";
 }
 
@@ -1249,7 +1381,9 @@ function renderInsights(plot, assessment = assessGarden(plot)) {
     : "Water needs are simple enough for one steady routine.";
   const heavyFeeders = selectedPlantObjects(plot).filter((plant) => plant.feed === "heavy").map((plant) => plant.name);
 
-  const spaceNote = review.closePairs.length
+  const spaceNote = review.crowdedPlants.length
+    ? `${review.crowdedPlants.length} plant${review.crowdedPlants.length === 1 ? " needs" : "s need"} more room for the requested spacing. Reduce quantities, add a plot, or choose the compact goal.`
+    : review.closePairs.length
     ? `${review.closePairs.length} close placement${review.closePairs.length === 1 ? "" : "s"} detected. Move ${review.closePairs[0].first.name} and ${review.closePairs[0].second.name} farther apart for airflow and easier harvests.`
     : review.centerLanePlants.length
       ? `${review.centerLanePlants.length} plant${review.centerLanePlants.length === 1 ? " is" : "s are"} in the center access lane. Move ${review.centerLanePlants[0].name} to either side to keep the bed reachable.`
@@ -1263,7 +1397,7 @@ function renderInsights(plot, assessment = assessGarden(plot)) {
 
   const careNote = `${placementSummary(plot)} ${heavyFeeders.length ? `Compost near ${heavyFeeders.slice(0, 2).join(" and ")}.` : water}`;
   const notes = [
-    ["Space review", spaceNote, review.closePairs.length || review.centerLanePlants.length || assessment.density > 1.05 ? "warning" : "good"],
+    ["Space review", spaceNote, review.crowdedPlants.length || review.closePairs.length || review.centerLanePlants.length || assessment.density > 1.05 ? "warning" : "good"],
     ["Companion planting", companionNote, review.companionPairs.length ? "good" : "warning"],
     ["Why this layout", careNote, "good"]
   ];
@@ -1307,7 +1441,7 @@ function scheduleTasks(plot, climate) {
       tasks.push({
         date: plantDate,
         title: `Plant ${plant.name}`,
-      copy: `${plant.sun === "full" ? "Use the brightest band" : "Use a cooler part-sun band"} with ${plant.spacing} ft spacing.${plant.packet?.depth ? ` Plant ${plant.packet.depth} deep.` : ""} ${plant.family === "nightshade" || plant.family === "cucurbit" ? "Wait for warm soil." : ""}`,
+      copy: `${plant.sun === "full" ? "Use the brightest band" : "Use a cooler part-sun band"} with ${plant.spacing} ft spacing. Plant ${plant.depth || "according to the seed packet"} deep. ${plant.family === "nightshade" || plant.family === "cucurbit" ? "Wait for warm soil." : ""}`,
         key: `${plot.id}-${plant.id}-plant`,
         type: "planting"
       });
