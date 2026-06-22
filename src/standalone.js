@@ -153,6 +153,8 @@ const state = {
   activePageId: "homePage",
   selectedPlantUid: "",
   completedTasks: [],
+  customTasks: [],
+  openTaskKey: "",
   onboardingComplete: false,
   calendarMonth: new Date().getMonth(),
   calendarYear: new Date().getFullYear(),
@@ -185,6 +187,8 @@ let activeDrag = null;
 let saveTimer = null;
 let cloudTimer = null;
 let packetScanData = null;
+let lastAiAnswer = "";
+let activeSpeechRecognition = null;
 const cloudState = {
   ready: false,
   loading: false,
@@ -210,6 +214,7 @@ const els = {
   renameGarden: document.querySelector("#renameGardenBtn"),
   archiveGarden: document.querySelector("#archiveGardenBtn"),
   deleteGarden: document.querySelector("#deleteGardenBtn"),
+  gardenCover: document.querySelector("#gardenCoverInput"),
   plotTabs: document.querySelector("#plotTabs"),
   addPlot: document.querySelector("#addPlotBtn"),
   plantSearch: document.querySelector("#plantSearchInput"),
@@ -256,6 +261,7 @@ const els = {
   widthLabel: document.querySelector("#widthLabel"),
   lengthLabel: document.querySelector("#lengthLabel"),
   taskPageList: document.querySelector("#taskPageList"),
+  addTask: document.querySelector("#addTaskBtn"),
   markTasks: document.querySelector("#markTasksBtn"),
   calendarGrid: document.querySelector("#calendarGrid"),
   calendarTitle: document.querySelector("#calendarTitle"),
@@ -265,7 +271,15 @@ const els = {
   calendarViewButtons: document.querySelectorAll("[data-calendar-view]"),
   askForm: document.querySelector("#askForm"),
   askInput: document.querySelector("#askInput"),
+  voiceAsk: document.querySelector("#voiceAskBtn"),
+  readResponse: document.querySelector("#readResponseBtn"),
   chatWindow: document.querySelector("#chatWindow"),
+  customTaskDialog: document.querySelector("#customTaskDialog"),
+  customTaskForm: document.querySelector("#customTaskForm"),
+  customTaskTitle: document.querySelector("#customTaskTitle"),
+  customTaskDate: document.querySelector("#customTaskDate"),
+  customTaskNotes: document.querySelector("#customTaskNotes"),
+  closeTaskDialog: document.querySelector("#closeTaskDialogBtn"),
   pageJumps: document.querySelectorAll("[data-page-jump]"),
   cloudCard: document.querySelector(".cloud-card"),
   cloudAccountBadge: document.querySelector("#cloudAccountBadge"),
@@ -309,6 +323,7 @@ function getPlanSnapshot() {
     activePageId: state.activePageId,
     selectedPlantUid: state.selectedPlantUid,
     completedTasks: state.completedTasks,
+    customTasks: state.customTasks,
     onboardingComplete: state.onboardingComplete,
     calendarMonth: state.calendarMonth,
     calendarYear: state.calendarYear,
@@ -371,6 +386,7 @@ function applyPlanSnapshot(plan) {
   if (plan.activePageId) state.activePageId = plan.activePageId;
   if (plan.selectedPlantUid) state.selectedPlantUid = plan.selectedPlantUid;
   if (Array.isArray(plan.completedTasks)) state.completedTasks = plan.completedTasks;
+  state.customTasks = Array.isArray(plan.customTasks) ? plan.customTasks : [];
   state.onboardingComplete = typeof plan.onboardingComplete === "boolean" ? plan.onboardingComplete : true;
   if (Number.isInteger(plan.calendarMonth)) state.calendarMonth = plan.calendarMonth;
   if (Number.isInteger(plan.calendarYear)) state.calendarYear = plan.calendarYear;
@@ -488,6 +504,7 @@ function applyOnboarding(event) {
   state.onboardingComplete = true;
   state.activePageId = "layoutPage";
   state.selectedPlantUid = "";
+  state.openTaskKey = "";
   if (els.onboardingPanel) els.onboardingPanel.classList.remove("active");
   syncControlsFromPlot();
   generateLayout();
@@ -928,14 +945,33 @@ function renderGardenLibrary() {
     .map((garden) => {
       const summary = gardenSummary(garden);
       const isCurrent = garden.id === state.activeGardenId;
+      const cover = garden.coverImage
+        ? `<span class="garden-library-cover"><img src="${escapeHtml(garden.coverImage)}" alt="" /></span>`
+        : `<span class="garden-library-cover placeholder" aria-hidden="true">🌱</span>`;
       return `
         <button class="garden-library-card${isCurrent ? " active" : ""}" type="button" data-open-garden="${garden.id}">
-          <span class="garden-library-year">${gardenSeason(garden)}</span>
+          ${cover}
           <span class="garden-library-main"><strong>${escapeHtml(garden.name)}</strong><small>${summary.plots || 0} plot${summary.plots === 1 ? "" : "s"} · ${summary.plants || 0} plants</small></span>
-          <span class="garden-library-open">Open</span>
+          <span class="garden-library-year">${gardenSeason(garden)}</span>
         </button>
       `;
     }).join("");
+}
+
+async function updateGardenCover() {
+  const file = els.gardenCover?.files?.[0];
+  const garden = activeGarden();
+  if (!file || !garden) return;
+  try {
+    garden.coverImage = await prepareGardenCover(file);
+    renderGardenLibrary();
+    setSaveStatus("Garden cover saved");
+    savePlan();
+  } catch (error) {
+    setSaveStatus(error.message || "Garden cover could not be saved");
+  } finally {
+    if (els.gardenCover) els.gardenCover.value = "";
+  }
 }
 
 function renderGardenManager() {
@@ -976,6 +1012,7 @@ function resetPlanForGarden(gardenId) {
   state.activePageId = "layoutPage";
   state.selectedPlantUid = "";
   state.completedTasks = [];
+  state.customTasks = [];
   state.onboardingComplete = true;
   state.plots.splice(0, state.plots.length, {
     id: state.activePlotId,
@@ -1014,7 +1051,7 @@ function archiveCurrentGarden() {
   const season = clamp(Number(seasonInput) || gardenSeason(garden), 1900, 2200);
   const snapshot = getPlanSnapshot();
   const id = `garden-${Date.now()}`;
-  const archive = { id, name: `${garden.name} archive`, season, archived: true };
+  const archive = { id, name: `${garden.name} archive`, season, archived: true, coverImage: garden.coverImage || "" };
   state.gardens.push(archive);
   const archivePlan = {
     ...snapshot,
@@ -1409,15 +1446,16 @@ function renderPlot() {
     state.selectedPlantUid = "";
   }
 
-  plot.placedPlants.forEach((plant) => {
+  plot.placedPlants.forEach((plant, index) => {
     const chip = document.createElement("button");
     chip.type = "button";
-    chip.className = `plant-chip${plant.uid === state.selectedPlantUid ? " selected" : ""}`;
+    chip.className = `plant-chip reveal${plant.uid === state.selectedPlantUid ? " selected" : ""}`;
     chip.dataset.uid = plant.uid;
     chip.style.left = `${plant.x * 100}%`;
     chip.style.top = `${plant.y * 100}%`;
     chip.style.background = plant.color;
     chip.style.setProperty("--size", `${clamp((plant.sizeFt / plot.width) * els.plot.clientWidth, 34, 78)}px`);
+    chip.style.animationDelay = `${Math.min(index, 14) * 35}ms`;
     chip.title = `${plant.name}: drag to move`;
     chip.innerHTML = `<small>${plant.short}</small>`;
     chip.addEventListener("pointerdown", startDrag);
@@ -1696,6 +1734,18 @@ function scheduleTasks(plot, climate) {
     });
   }
 
+  (state.customTasks || [])
+    .filter((task) => task.plotId === plot.id && /^\d{4}-\d{2}-\d{2}$/.test(task.date || ""))
+    .forEach((task) => {
+      tasks.push({
+        date: dateFromIso(task.date),
+        title: task.title,
+        copy: task.notes || "Personal garden reminder.",
+        key: task.key,
+        type: "manual"
+      });
+    });
+
   tasks.sort((a, b) => a.date - b.date);
   return tasks;
 }
@@ -1706,7 +1756,7 @@ function renderSchedule(plot, climate) {
     ? tasks.slice(0, 16).map((task) => `
       <li class="schedule-item">
         <time class="schedule-date">${formatDate(task.date)}</time>
-        <span class="schedule-copy"><strong>${task.title}</strong><span>${task.copy}</span></span>
+        <span class="schedule-copy"><strong>${escapeHtml(task.title)}</strong><span>${escapeHtml(task.copy)}</span></span>
       </li>
     `).join("")
     : `<li class="schedule-item"><time class="schedule-date">Ready</time><span class="schedule-copy"><strong>No plants selected</strong><span>Add plants to create this plot's calendar.</span></span></li>`;
@@ -1731,7 +1781,7 @@ function renderTaskPage() {
     ["Earlier this season", tasks.filter((task) => task.date < todayStart)],
     ["Today", tasks.filter((task) => isoDate(task.date) === isoDate(todayStart))],
     ["This week", tasks.filter((task) => task.date > todayStart && task.date <= weekEnd)],
-    ["Later", tasks.filter((task) => task.date > weekEnd).slice(0, 18)]
+    ["Later", tasks.filter((task) => task.date > weekEnd)]
   ];
   els.taskPageList.innerHTML = tasks.length
     ? groups.map(([label, groupTasks]) => `
@@ -1741,13 +1791,27 @@ function renderTaskPage() {
       return `
         <li class="schedule-item task-item${complete ? " complete" : ""}">
           <time class="schedule-date">${formatDate(task.date)}</time>
-          <span class="schedule-copy"><strong>${task.title}</strong><span>${task.copy}</span></span>
+          <div class="schedule-copy"><strong>${escapeHtml(task.title)}</strong><span>${escapeHtml(task.copy)}</span>
+            <button class="task-detail-trigger" type="button" data-task-details="${task.key}" aria-expanded="${state.openTaskKey === task.key}">${state.openTaskKey === task.key ? "Hide directions" : "How to do this"}</button>
+            <div class="task-detail${state.openTaskKey === task.key ? " active" : ""}">${escapeHtml(taskGuidance(task))}</div>
+          </div>
           <button class="task-toggle" type="button" data-task-key="${task.key}" aria-pressed="${complete}" aria-label="Mark ${task.title} ${complete ? "not done" : "done"}">${complete ? "Done" : "Mark done"}</button>
         </li>
       `;
       }).join("") : `<li class="schedule-item quiet"><time class="schedule-date">Clear</time><span class="schedule-copy"><strong>No tasks</strong><span>Nothing scheduled for this window.</span></span></li>`}
     `).join("")
     : `<li class="schedule-item"><time class="schedule-date">Ready</time><span class="schedule-copy"><strong>No tasks yet</strong><span>Add plants on the Layout page to build your task list.</span></span></li>`;
+}
+
+function taskGuidance(task) {
+  if (task.type === "manual") return task.copy || "Use this as a personal reminder for your garden.";
+  if (task.type === "planting") return "Use the spacing shown in your plan, plant at the listed depth, water the soil gently, then label the row before you move on.";
+  if (task.type === "water") return "Check the soil a finger deep. Water at the base only when it is dry at that depth, then avoid wetting leaves when possible.";
+  if (task.type === "soil") return "Spread compost or fertilizer around, not against, plant stems. Water afterward and follow the product label for the amount.";
+  if (task.type === "pest") return "Look under leaves and along stems. Remove damaged foliage, note what you see, and use local extension guidance before treating a serious problem.";
+  if (task.type === "harvest") return "Harvest in the cool part of the day. Pick ripe produce regularly so the plant keeps producing, and record anything unusual for next season.";
+  if (task.type === "maintenance") return "Start at the access path, pull small weeds, then work outward. Keep enough open space for airflow, watering, and an easy harvest.";
+  return "Complete this step when conditions match your garden and the guidance in your plan.";
 }
 
 function renderCalendarPage() {
@@ -1803,9 +1867,10 @@ function renderCalendarPage() {
         <div class="calendar-day-number">${date.getDate()}</div>
         <div class="calendar-events">
           ${dayTasks.slice(0, 3).map((task) => `
-            <article class="calendar-event ${task.type || "task"}">
-              <strong>${task.title}</strong>
-              <span>${task.copy}</span>
+            <article class="calendar-event ${task.type || "task"}${state.completedTasks.includes(task.key) ? " complete" : ""}">
+              <strong>${escapeHtml(task.title)}</strong>
+              <span>${escapeHtml(task.copy)}</span>
+              ${view === "day" ? `<button class="calendar-task-toggle" type="button" data-calendar-task-key="${task.key}" aria-pressed="${state.completedTasks.includes(task.key)}">${state.completedTasks.includes(task.key) ? "Completed" : "Mark complete"}</button>` : ""}
             </article>
           `).join("")}
           ${dayTasks.length > 3 ? `<p class="calendar-more">+${dayTasks.length - 3} more</p>` : ""}
@@ -1970,11 +2035,46 @@ function switchPage(pageId) {
   queueAutoSave();
 }
 
+function openCustomTaskDialog() {
+  if (!els.customTaskDialog) return;
+  if (els.customTaskDate && !els.customTaskDate.value) els.customTaskDate.value = isoDate(new Date());
+  if (typeof els.customTaskDialog.showModal === "function") els.customTaskDialog.showModal();
+  else els.customTaskDialog.setAttribute("open", "");
+  els.customTaskTitle?.focus();
+}
+
+function closeCustomTaskDialog() {
+  if (!els.customTaskDialog) return;
+  if (typeof els.customTaskDialog.close === "function") els.customTaskDialog.close();
+  else els.customTaskDialog.removeAttribute("open");
+}
+
+function addCustomTask(event) {
+  event.preventDefault();
+  const title = els.customTaskTitle?.value.trim();
+  const date = els.customTaskDate?.value;
+  if (!title || !date) return;
+  state.customTasks.push({
+    key: `${activePlot().id}-manual-${Date.now()}`,
+    plotId: activePlot().id,
+    title,
+    date,
+    notes: els.customTaskNotes?.value.trim() || ""
+  });
+  state.openTaskKey = "";
+  if (els.customTaskForm) els.customTaskForm.reset();
+  closeCustomTaskDialog();
+  renderTaskPage();
+  renderCalendarPage();
+  savePlan();
+}
+
 function markNextTaskDone() {
   const task = scheduleTasks(activePlot(), climateForZip(els.zip.value)).find((item) => !state.completedTasks.includes(item.key));
   if (!task) return;
   state.completedTasks.push(task.key);
   renderTaskPage();
+  renderCalendarPage();
   queueAutoSave();
 }
 
@@ -1984,7 +2084,13 @@ function toggleTaskComplete(taskKey) {
   if (currentIndex === -1) state.completedTasks.push(taskKey);
   else state.completedTasks.splice(currentIndex, 1);
   renderTaskPage();
+  renderCalendarPage();
   queueAutoSave();
+}
+
+function toggleTaskDetails(taskKey) {
+  state.openTaskKey = state.openTaskKey === taskKey ? "" : taskKey;
+  renderTaskPage();
 }
 
 function answerGardenQuestion(question) {
@@ -2121,7 +2227,58 @@ async function askSol(event) {
     thinking.removeAttribute("id");
     thinking.querySelector("span").textContent = answer;
   }
+  lastAiAnswer = answer;
+  if (els.readResponse) els.readResponse.disabled = false;
   els.chatWindow.scrollTop = els.chatWindow.scrollHeight;
+}
+
+function startVoiceQuestion() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    if (els.askInput) els.askInput.placeholder = "Voice questions are not available in this browser. Type your question here.";
+    return;
+  }
+  if (activeSpeechRecognition) {
+    activeSpeechRecognition.stop();
+    return;
+  }
+  const recognition = new SpeechRecognition();
+  activeSpeechRecognition = recognition;
+  recognition.lang = "en-US";
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+  if (els.voiceAsk) {
+    els.voiceAsk.classList.add("listening");
+    els.voiceAsk.textContent = "●";
+    els.voiceAsk.title = "Stop listening";
+  }
+  recognition.onresult = (result) => {
+    const transcript = result.results?.[0]?.[0]?.transcript?.trim();
+    if (!transcript || !els.askInput) return;
+    els.askInput.value = transcript;
+    askSol({ preventDefault() {} });
+  };
+  recognition.onerror = () => {
+    if (els.askInput) els.askInput.placeholder = "I couldn't hear that. Try again or type your question.";
+  };
+  recognition.onend = () => {
+    activeSpeechRecognition = null;
+    if (els.voiceAsk) {
+      els.voiceAsk.classList.remove("listening");
+      els.voiceAsk.textContent = "🎙";
+      els.voiceAsk.title = "Ask by voice";
+    }
+  };
+  recognition.start();
+}
+
+function readLatestAnswer() {
+  if (!lastAiAnswer || !window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const message = new SpeechSynthesisUtterance(lastAiAnswer);
+  message.lang = "en-US";
+  message.rate = 0.97;
+  window.speechSynthesis.speak(message);
 }
 
 function escapeHtml(text) {
@@ -2203,6 +2360,28 @@ async function preparePacketImage(file) {
   const context = canvas.getContext("2d");
   context.drawImage(image, 0, 0, canvas.width, canvas.height);
   return canvas.toDataURL("image/jpeg", 0.8);
+}
+
+async function prepareGardenCover(file) {
+  if (!file?.type?.startsWith("image/")) throw new Error("Choose a garden photo.");
+  if (file.size > 10 * 1024 * 1024) throw new Error("Choose a photo smaller than 10 MB.");
+  const original = await fileToDataUrl(file);
+  const image = new Image();
+  await new Promise((resolve, reject) => {
+    image.onload = resolve;
+    image.onerror = () => reject(new Error("CultivAIte could not open that photo."));
+    image.src = original;
+  });
+  const longestSide = Math.max(image.naturalWidth, image.naturalHeight);
+  const scale = Math.min(1, 520 / longestSide);
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+  canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+  const context = canvas.getContext("2d");
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+  const thumbnail = canvas.toDataURL("image/jpeg", 0.68);
+  if (thumbnail.length > 300000) throw new Error("Choose a simpler photo so it can save with your garden.");
+  return thumbnail;
 }
 
 function applyPacketScan(details) {
@@ -2363,6 +2542,7 @@ if (els.homeNewGarden) els.homeNewGarden.addEventListener("click", createGarden)
 if (els.renameGarden) els.renameGarden.addEventListener("click", renameGarden);
 if (els.archiveGarden) els.archiveGarden.addEventListener("click", archiveCurrentGarden);
 if (els.deleteGarden) els.deleteGarden.addEventListener("click", deleteGarden);
+if (els.gardenCover) els.gardenCover.addEventListener("change", updateGardenCover);
 if (els.gardenLibrary) {
   els.gardenLibrary.addEventListener("click", (event) => {
     const card = event.target.closest("[data-open-garden]");
@@ -2441,6 +2621,11 @@ if (els.calendarToday) els.calendarToday.addEventListener("click", jumpCalendarT
 els.calendarViewButtons.forEach((button) => button.addEventListener("click", () => setCalendarView(button.dataset.calendarView)));
 if (els.calendarGrid) {
   els.calendarGrid.addEventListener("click", (event) => {
+    const taskButton = event.target.closest("[data-calendar-task-key]");
+    if (taskButton) {
+      toggleTaskComplete(taskButton.dataset.calendarTaskKey);
+      return;
+    }
     const day = event.target.closest("[data-calendar-date]");
     if (!day) return;
     state.calendarFocusDate = day.dataset.calendarDate;
@@ -2472,13 +2657,23 @@ els.plannerForm.addEventListener("submit", (event) => {
 });
 els.saveNow.addEventListener("click", saveCurrentPlan);
 els.markTasks.addEventListener("click", markNextTaskDone);
+if (els.addTask) els.addTask.addEventListener("click", openCustomTaskDialog);
+if (els.closeTaskDialog) els.closeTaskDialog.addEventListener("click", closeCustomTaskDialog);
+if (els.customTaskForm) els.customTaskForm.addEventListener("submit", addCustomTask);
 if (els.taskPageList) {
   els.taskPageList.addEventListener("click", (event) => {
+    const detail = event.target.closest("[data-task-details]");
+    if (detail) {
+      toggleTaskDetails(detail.dataset.taskDetails);
+      return;
+    }
     const button = event.target.closest("[data-task-key]");
     if (button) toggleTaskComplete(button.dataset.taskKey);
   });
 }
 els.askForm.addEventListener("submit", askSol);
+if (els.voiceAsk) els.voiceAsk.addEventListener("click", startVoiceQuestion);
+if (els.readResponse) els.readResponse.addEventListener("click", readLatestAnswer);
 if (els.plantedDate) els.plantedDate.addEventListener("change", updateSelectedPlantDate);
 els.plantEditor.addEventListener("click", (event) => {
   const nudgeButton = event.target.closest("[data-nudge]");
