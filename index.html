@@ -36,47 +36,73 @@
           <div>
             <p class="eyebrow">Start your garden</p>
             <h2>Let CultivAIte build your first plan.</h2>
-            <p>Enter your garden basics, choose a few plants, and add planted dates if your season is already underway.</p>
+            <p>A few details now make every layout, task, and recommendation more useful.</p>
           </div>
+          <ol class="onboarding-progress" aria-label="Setup progress">
+            <li class="active" data-onboarding-progress="1"><span>1</span> Garden</li>
+            <li data-onboarding-progress="2"><span>2</span> Plants</li>
+            <li data-onboarding-progress="3"><span>3</span> Season</li>
+          </ol>
           <form class="onboarding-form" id="onboardingForm">
-            <label>
-              ZIP code
-              <input id="onboardZip" inputmode="numeric" maxlength="5" placeholder="50161" />
-            </label>
-            <div class="onboarding-row">
+            <section class="onboarding-step active" data-onboarding-step="1">
+              <p class="setup-step-label">Garden basics</p>
               <label>
-                Plot width
-                <input id="onboardWidth" type="number" min="2" max="60" value="12" />
+                ZIP code
+                <input id="onboardZip" inputmode="numeric" maxlength="5" pattern="[0-9]{5}" placeholder="50161" required />
               </label>
-              <label>
-                Plot length
-                <input id="onboardLength" type="number" min="2" max="80" value="18" />
+              <div class="onboarding-row">
+                <label>
+                  Plot width
+                  <div class="unit-input">
+                    <input id="onboardWidth" type="number" min="2" max="60" value="12" required />
+                    <span>ft</span>
+                  </div>
+                </label>
+                <label>
+                  Plot length
+                  <div class="unit-input">
+                    <input id="onboardLength" type="number" min="2" max="80" value="18" required />
+                    <span>ft</span>
+                  </div>
+                </label>
+              </div>
+            </section>
+            <section class="onboarding-step" data-onboarding-step="2" aria-hidden="true">
+              <p class="setup-step-label">Choose a few plants</p>
+              <p class="setup-step-copy">Pick only what you want to begin with. You can search the complete plant library later.</p>
+              <fieldset class="starter-plants">
+                <legend>Starter plants</legend>
+                <label><input type="checkbox" value="tomato" checked /> Tomato</label>
+                <label><input type="checkbox" value="basil" checked /> Basil</label>
+                <label><input type="checkbox" value="lettuce" checked /> Lettuce</label>
+                <label><input type="checkbox" value="carrot" checked /> Carrot</label>
+                <label><input type="checkbox" value="marigold" checked /> Marigold</label>
+                <label><input type="checkbox" value="pepper" /> Pepper</label>
+                <label><input type="checkbox" value="cucumber" /> Cucumber</label>
+                <label><input type="checkbox" value="kale" /> Kale</label>
+              </fieldset>
+            </section>
+            <section class="onboarding-step" data-onboarding-step="3" aria-hidden="true">
+              <p class="setup-step-label">Where are you in the season?</p>
+              <p class="setup-step-copy">This helps CultivAIte build the right tasks and calendar for today.</p>
+              <label class="onboarding-check">
+                <input id="onboardAlreadyPlanted" type="checkbox" />
+                I already planted these
               </label>
-            </div>
-            <fieldset class="starter-plants">
-              <legend>Choose starter plants</legend>
-              <label><input type="checkbox" value="tomato" checked /> Tomato</label>
-              <label><input type="checkbox" value="basil" checked /> Basil</label>
-              <label><input type="checkbox" value="lettuce" checked /> Lettuce</label>
-              <label><input type="checkbox" value="carrot" checked /> Carrot</label>
-              <label><input type="checkbox" value="marigold" checked /> Marigold</label>
-              <label><input type="checkbox" value="pepper" /> Pepper</label>
-              <label><input type="checkbox" value="cucumber" /> Cucumber</label>
-              <label><input type="checkbox" value="kale" /> Kale</label>
-            </fieldset>
-            <label class="onboarding-check">
-              <input id="onboardAlreadyPlanted" type="checkbox" />
-              I already planted these
-            </label>
-            <div class="onboarding-date-panel" id="onboardDatePanel">
-              <label>
-                Planted date
-                <input id="onboardPlantedDate" type="date" />
-              </label>
-            </div>
+              <div class="onboarding-date-panel" id="onboardDatePanel">
+                <label>
+                  Planted date
+                  <input id="onboardPlantedDate" type="date" />
+                </label>
+              </div>
+            </section>
             <div class="onboarding-actions">
               <button type="button" id="skipOnboardingBtn">Skip for now</button>
-              <button type="submit">Generate my garden</button>
+              <div class="onboarding-actions-main">
+                <button type="button" id="onboardingBackBtn">Back</button>
+                <button type="button" id="onboardingNextBtn">Continue</button>
+                <button type="submit" id="onboardingSubmitBtn">Build my garden</button>
+              </div>
             </div>
           </form>
         </div>
@@ -166,6 +192,34 @@
               <option value="pollinator">Pollinator friendly</option>
               <option value="compact">Compact spacing</option>
               <option value="lowWater">Lower water</option>
+            </select>
+          </label>
+          <label>
+            Sun exposure
+            <select id="sunExposureInput">
+              <option value="full">Full sun (6+ hours)</option>
+              <option value="part">Part sun (4-6 hours)</option>
+              <option value="shade">Mostly shade (under 4 hours)</option>
+            </select>
+          </label>
+          <label>
+            Strongest sun comes from
+            <select id="sunDirectionInput">
+              <option value="south">South</option>
+              <option value="east">East</option>
+              <option value="west">West</option>
+              <option value="north">North</option>
+              <option value="unknown">Not sure</option>
+            </select>
+          </label>
+          <label>
+            Soil profile
+            <select id="soilProfileInput">
+              <option value="balanced">Balanced garden soil</option>
+              <option value="lowFertility">Low fertility / needs compost</option>
+              <option value="sandy">Sandy / dries quickly</option>
+              <option value="clay">Clay / drains slowly</option>
+              <option value="rich">Compost-rich soil</option>
             </select>
           </label>
         </form>
