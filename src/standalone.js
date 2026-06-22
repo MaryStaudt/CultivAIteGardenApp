@@ -154,6 +154,9 @@ const state = {
       width: 12,
       length: 18,
       goal: "balanced",
+      sunExposure: "full",
+      sunDirection: "south",
+      soilProfile: "balanced",
       selected: new Map([
         ["tomato", 4],
         ["basil", 3],
@@ -187,6 +190,9 @@ const els = {
   width: document.querySelector("#widthInput"),
   length: document.querySelector("#lengthInput"),
   goal: document.querySelector("#goalInput"),
+  sunExposure: document.querySelector("#sunExposureInput"),
+  sunDirection: document.querySelector("#sunDirectionInput"),
+  soilProfile: document.querySelector("#soilProfileInput"),
   gardenSelect: document.querySelector("#gardenSelect"),
   newGarden: document.querySelector("#newGardenBtn"),
   renameGarden: document.querySelector("#renameGardenBtn"),
@@ -745,6 +751,8 @@ function assessGarden(plot, climate = climateForZip(els.zip.value), extension = 
   const heavyFeeders = plants.filter((plant) => plant.feed === "heavy");
   const soilBuilders = plants.filter((plant) => plant.feed === "soil-builder");
   const selectedIds = new Set(plants.map((plant) => plant.id));
+  const sunExposure = plot.sunExposure || "full";
+  const soilProfile = plot.soilProfile || "balanced";
   const warnings = [];
   const wins = [];
 
@@ -774,7 +782,28 @@ function assessGarden(plot, climate = climateForZip(els.zip.value), extension = 
   }
   if (waterGroups.deep && waterGroups.light) warnings.push("Deep-water crops and light-water crops are mixed. Keep them in separate bands when possible.");
 
-  return { area, usedArea, density, families, waterGroups, heavyFeeders, soilBuilders, warnings, wins, extension, climate };
+  if (sunExposure === "shade" && plants.some((plant) => plant.sun === "full")) {
+    warnings.push("This plot is mostly shaded, but it includes full-sun crops. Consider a sunnier plot or choose more shade-tolerant plants.");
+  } else if (sunExposure === "part" && plants.some((plant) => plant.sun === "full")) {
+    warnings.push("This is a part-sun plot. CultivAIte is reserving the brightest edge for full-sun crops, but fruiting crops may need a sunnier location for best production.");
+  } else if (sunExposure === "full") {
+    wins.push("Sun placement is using the full-sun profile, with cooler crops placed near taller plants where possible.");
+  }
+
+  if (soilProfile === "lowFertility" && heavyFeeders.length) {
+    warnings.push(`Low-fertility soil needs compost before planting ${heavyFeeders.slice(0, 3).map((plant) => plant.name).join(", ")}.`);
+  }
+  if (soilProfile === "sandy" && waterGroups.deep) {
+    warnings.push("Sandy soil dries quickly. Deep-water crops need mulch and more frequent moisture checks.");
+  }
+  if (soilProfile === "clay" && plants.some((plant) => plant.family === "root")) {
+    warnings.push("Root crops in clay soil need loosened, amended soil so roots can size up evenly.");
+  }
+  if (soilProfile === "rich" && heavyFeeders.length) {
+    wins.push("Compost-rich soil supports the selected heavy feeders; avoid over-fertilizing leafy growth.");
+  }
+
+  return { area, usedArea, density, families, waterGroups, heavyFeeders, soilBuilders, sunExposure, soilProfile, warnings, wins, extension, climate };
 }
 
 function countBy(items, key) {
@@ -804,6 +833,9 @@ function syncControlsFromPlot() {
   els.width.value = plot.width;
   els.length.value = plot.length;
   els.goal.value = plot.goal;
+  if (els.sunExposure) els.sunExposure.value = plot.sunExposure || "full";
+  if (els.sunDirection) els.sunDirection.value = plot.sunDirection || "south";
+  if (els.soilProfile) els.soilProfile.value = plot.soilProfile || "balanced";
 }
 
 function syncPlotFromControls() {
@@ -811,6 +843,9 @@ function syncPlotFromControls() {
   plot.width = clamp(Number(els.width.value) || 12, 2, 60);
   plot.length = clamp(Number(els.length.value) || 18, 2, 80);
   plot.goal = els.goal.value;
+  plot.sunExposure = els.sunExposure?.value || "full";
+  plot.sunDirection = els.sunDirection?.value || "south";
+  plot.soilProfile = els.soilProfile?.value || "balanced";
 }
 
 function addPlot() {
@@ -821,6 +856,9 @@ function addPlot() {
     width: 8,
     length: 12,
     goal: "balanced",
+    sunExposure: "full",
+    sunDirection: "south",
+    soilProfile: "balanced",
     selected: new Map([["lettuce", 4], ["spinach", 4], ["parsley", 2]]),
     plantedDates: {},
     placedPlants: []
@@ -880,6 +918,9 @@ function resetPlanForGarden(gardenId) {
     width: 8,
     length: 12,
     goal: "balanced",
+    sunExposure: "full",
+    sunDirection: "south",
+    soilProfile: "balanced",
     selected: new Map([["lettuce", 6], ["carrot", 12], ["marigold", 4]]),
     plantedDates: {},
     placedPlants: []
@@ -1018,7 +1059,7 @@ function generateLayout() {
 }
 
 function choosePlantPlacement(plant, plot, assessment, plantIndex, plantNumber) {
-  const targetLane = strategicLane(plant, plantIndex, assessment);
+  const targetLane = strategicLane(plant, plantIndex, assessment, plot);
   const candidates = placementCandidates(plant, plot, targetLane, plantIndex, plantNumber);
   const scored = candidates.map((candidate) => ({
     ...candidate,
@@ -1055,6 +1096,12 @@ function placementCandidates(plant, plot, targetLane, plantIndex, plantNumber) {
 function placementScore(candidate, plant, plot, targetLane) {
   let score = candidate.laneDistance * 24;
   const placed = plot.placedPlants || [];
+  const soilProfile = plot.soilProfile || "balanced";
+  const sunExposure = plot.sunExposure || "full";
+
+  if (plant.height === "tall") score += tallCropEdgeDistance(candidate, plot) * 32;
+  if (sunExposure === "part" && plant.sun === "full") score += brightestEdgeDistance(candidate, plot) * 18;
+  if (sunExposure === "shade" && plant.sun === "full") score += 28;
 
   placed.forEach((existing) => {
     const distance = placedPlantDistance(candidate, existing, plot);
@@ -1068,16 +1115,40 @@ function placementScore(candidate, plant, plot, targetLane) {
     else if (sameWater && distance < Math.max(plant.spacing, existing.spacing) * 2.8) score -= 4;
     else if (!sameWater && distance < Math.max(plant.spacing, existing.spacing) * 1.4) score += 16;
 
-    if (bothHeavy && distance < Math.max(plant.spacing, existing.spacing) * 2.5) score += 24;
+    if (bothHeavy && distance < Math.max(plant.spacing, existing.spacing) * 2.5) {
+      score += soilProfile === "lowFertility" ? 46 : 24;
+    }
     if (plant.feed === "soil-builder" && existing.feed === "heavy" && distance < Math.max(plant.spacing, existing.spacing) * 3) score -= 8;
-    if (plant.sun === "part" && existing.height === "tall" && distance > 1 && distance < 3.5) score -= 7;
+    if (plant.sun === "part" && existing.height === "tall" && distance > 1 && distance < 3.5) score -= sunExposure === "full" ? 9 : 5;
     if (plant.sun === "full" && existing.height === "tall" && distance < Math.max(plant.spacing, existing.spacing) * 1.5) score += 12;
   });
 
+  if (soilProfile === "sandy" && plant.water === "deep") score += candidate.laneDistance * 4;
+  if (soilProfile === "clay" && plant.family === "root") score += 4;
   if (plot.goal === "pollinator" && plant.family === "flower") score -= 8;
   if (plot.goal === "lowWater" && plant.water === "deep") score += 18;
   if (plot.goal === "compact") score -= 2;
   return score;
+}
+
+function tallCropEdgeDistance(candidate, plot) {
+  switch (plot.sunDirection || "south") {
+    case "north": return 1 - candidate.y;
+    case "east": return candidate.x;
+    case "west": return 1 - candidate.x;
+    case "south": return candidate.y;
+    default: return candidate.y;
+  }
+}
+
+function brightestEdgeDistance(candidate, plot) {
+  switch (plot.sunDirection || "south") {
+    case "north": return candidate.y;
+    case "east": return 1 - candidate.x;
+    case "west": return candidate.x;
+    case "south": return 1 - candidate.y;
+    default: return Math.abs(candidate.y - 0.5);
+  }
 }
 
 function areCompanions(first, second) {
@@ -1131,16 +1202,25 @@ function careZoneForPlant(plant) {
   return "main crop band";
 }
 
-function strategicLane(plant, plantIndex, assessment) {
+function strategicLane(plant, plantIndex, assessment, plot) {
+  const sunExposure = plot?.sunExposure || "full";
   if (plant.family === "flower") return plantIndex % 2 ? 0.16 : 0.88;
   if (plant.family === "allium") return 0.4;
   if (plant.feed === "soil-builder") return 0.5;
-  if (plant.height === "tall") return 0.2;
+  if (plant.height === "tall") return tallCropLane(plot);
   if (plant.height === "wide") return 0.82;
   if (plant.water === "deep") return 0.76;
   if (assessment.waterGroups.deep && plant.water === "light") return 0.34;
-  if (plant.sun === "part") return 0.64;
+  if (plant.sun === "part") return sunExposure === "full" ? 0.3 : 0.64;
   return 0.44;
+}
+
+function tallCropLane(plot) {
+  switch (plot?.sunDirection || "south") {
+    case "north": return 0.82;
+    case "south": return 0.18;
+    default: return 0.2;
+  }
 }
 
 function layoutSideOffset(plant, plantIndex) {
@@ -1721,8 +1801,10 @@ function exportPlan() {
     "",
     ...state.plots.flatMap((plot) => [
       `${plot.name}: ${plot.width} x ${plot.length} ft`,
+      `Sun: ${plot.sunExposure || "full"} · strongest sun from ${plot.sunDirection || "south"}`,
+      `Soil: ${plot.soilProfile || "balanced"}`,
       "Plants:",
-      ...selectedPlantObjects(plot).map((plant) => `- ${plant.qty} ${plant.name}`),
+      ...selectedPlantObjects(plot).map((plant) => `- ${plant.qty} ${plant.name}: ${plant.spacing} ft spacing · ${plant.depth || "follow seed packet"} deep · ${plant.water} water`),
       "Layout:",
       ...plot.placedPlants.map((plant) => `- ${plant.name}: ${(plant.x * 100).toFixed(0)}% across, ${(plant.y * 100).toFixed(0)}% down`),
       ""
@@ -1824,10 +1906,14 @@ function gardenAiContext(question = "") {
       width: plot.width,
       length: plot.length,
       goal: plot.goal,
+      sunExposure: plot.sunExposure || "full",
+      sunDirection: plot.sunDirection || "south",
+      soilProfile: plot.soilProfile || "balanced",
       plants: selectedPlantObjects(plot).map((plant) => ({
         name: plant.name,
         quantity: plant.qty,
         spacingFeet: plant.spacing,
+        plantingDepth: plant.depth,
         sun: plant.sun,
         water: plant.water,
         family: plant.family,
@@ -2016,7 +2102,7 @@ els.plantList.addEventListener("click", (event) => {
   generateLayout();
 });
 
-[els.width, els.length, els.goal].forEach((input) => {
+[els.width, els.length, els.goal, els.sunExposure, els.sunDirection, els.soilProfile].filter(Boolean).forEach((input) => {
   input.addEventListener("input", generateLayout);
   input.addEventListener("change", generateLayout);
 });
