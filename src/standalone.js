@@ -30,6 +30,15 @@ const plantLibrary = [
   { id: "cabbage", name: "Cabbage", short: "Cab", color: "#87916f", sun: "full", spacing: 1.6, start: -56, transplant: -14, harvest: 78, water: "even", companions: ["onion", "dill"] }
 ];
 
+const PLANT_ART = {
+  tomato: "🍅", "cherry-tomato": "🍅", basil: "🌿", pepper: "🫑", eggplant: "🍆",
+  lettuce: "🥬", kale: "🥬", "swiss-chard": "🥬", arugula: "🥬", spinach: "🥬",
+  carrot: "🥕", beet: "🫜", onion: "🧅", garlic: "🧄", cucumber: "🥒",
+  zucchini: "🥒", "summer-squash": "🎃", pumpkin: "🎃", marigold: "🌼",
+  nasturtium: "🌸", calendula: "🌼", parsley: "🌿", cilantro: "🌿", dill: "🌿",
+  radish: "🫜", bean: "🫛", pea: "🫛", broccoli: "🥦", cabbage: "🥬"
+};
+
 const STORAGE_KEY = "cultivaite-garden-plan-v1";
 const STORAGE_INDEX_KEY = "cultivaite-garden-index-v1";
 const ACTIVE_GARDEN_KEY = "cultivaite-active-garden-v1";
@@ -139,7 +148,7 @@ const COMPANION_WARNINGS = [
 
 const state = {
   activeGardenId: "garden-main",
-  gardens: [{ id: "garden-main", name: "2026 vegetable garden" }],
+  gardens: [{ id: "garden-main", name: "2026 vegetable garden", season: 2026 }],
   activePlotId: "plot-1",
   activePageId: "homePage",
   selectedPlantUid: "",
@@ -147,6 +156,8 @@ const state = {
   onboardingComplete: false,
   calendarMonth: new Date().getMonth(),
   calendarYear: new Date().getFullYear(),
+  calendarView: "month",
+  calendarFocusDate: isoDate(new Date()),
   plots: [
     {
       id: "plot-1",
@@ -197,6 +208,7 @@ const els = {
   gardenSelect: document.querySelector("#gardenSelect"),
   newGarden: document.querySelector("#newGardenBtn"),
   renameGarden: document.querySelector("#renameGardenBtn"),
+  archiveGarden: document.querySelector("#archiveGardenBtn"),
   deleteGarden: document.querySelector("#deleteGardenBtn"),
   plotTabs: document.querySelector("#plotTabs"),
   addPlot: document.querySelector("#addPlotBtn"),
@@ -238,6 +250,8 @@ const els = {
   homePlotText: document.querySelector("#homePlotText"),
   homeZoneText: document.querySelector("#homeZoneText"),
   homeSaveText: document.querySelector("#homeSaveText"),
+  gardenLibrary: document.querySelector("#gardenLibrary"),
+  homeNewGarden: document.querySelector("#homeNewGardenBtn"),
   headerSaveStatus: document.querySelector("#headerSaveStatus"),
   widthLabel: document.querySelector("#widthLabel"),
   lengthLabel: document.querySelector("#lengthLabel"),
@@ -248,6 +262,7 @@ const els = {
   calendarPrev: document.querySelector("#calendarPrevBtn"),
   calendarToday: document.querySelector("#calendarTodayBtn"),
   calendarNext: document.querySelector("#calendarNextBtn"),
+  calendarViewButtons: document.querySelectorAll("[data-calendar-view]"),
   askForm: document.querySelector("#askForm"),
   askInput: document.querySelector("#askInput"),
   chatWindow: document.querySelector("#chatWindow"),
@@ -297,6 +312,8 @@ function getPlanSnapshot() {
     onboardingComplete: state.onboardingComplete,
     calendarMonth: state.calendarMonth,
     calendarYear: state.calendarYear,
+    calendarView: state.calendarView,
+    calendarFocusDate: state.calendarFocusDate,
     plantLibrary,
     plots: state.plots.map((plot) => ({
       ...plot,
@@ -325,7 +342,7 @@ function saveGardenIndex() {
 function applyPlanSnapshot(plan) {
   if (!plan) return;
   if (Array.isArray(plan.gardens) && plan.gardens.length) {
-    state.gardens = plan.gardens;
+    state.gardens = plan.gardens.map((garden) => ({ ...garden, season: gardenSeason(garden) }));
   }
   if (plan.activeGardenId) state.activeGardenId = plan.activeGardenId;
   if (plan.zip) els.zip.value = plan.zip;
@@ -357,6 +374,8 @@ function applyPlanSnapshot(plan) {
   state.onboardingComplete = typeof plan.onboardingComplete === "boolean" ? plan.onboardingComplete : true;
   if (Number.isInteger(plan.calendarMonth)) state.calendarMonth = plan.calendarMonth;
   if (Number.isInteger(plan.calendarYear)) state.calendarYear = plan.calendarYear;
+  if (["month", "week", "day"].includes(plan.calendarView)) state.calendarView = plan.calendarView;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(plan.calendarFocusDate || "")) state.calendarFocusDate = plan.calendarFocusDate;
 }
 
 function savePlan() {
@@ -876,10 +895,53 @@ function activeGarden() {
   return state.gardens.find((garden) => garden.id === state.activeGardenId) || state.gardens[0];
 }
 
+function gardenSeason(garden = {}) {
+  const explicitSeason = Number(garden.season);
+  if (Number.isInteger(explicitSeason) && explicitSeason >= 1900 && explicitSeason <= 2200) return explicitSeason;
+  const namedSeason = String(garden.name || "").match(/\b(19|20)\d{2}\b/);
+  return namedSeason ? Number(namedSeason[0]) : new Date().getFullYear();
+}
+
+function gardenSummary(garden) {
+  const active = garden.id === state.activeGardenId;
+  let plots = active ? state.plots : [];
+  if (!active) {
+    try {
+      const saved = JSON.parse(window.localStorage.getItem(gardenPlanKey(garden.id)) || "{}");
+      plots = Array.isArray(saved.plots) ? saved.plots : [];
+    } catch (error) {
+      plots = [];
+    }
+  }
+  const plants = plots.reduce((total, plot) => {
+    const selected = Array.isArray(plot.selected) ? plot.selected : plot.selected instanceof Map ? [...plot.selected.entries()] : [];
+    return total + selected.reduce((count, [, quantity]) => count + (Number(quantity) || 0), 0);
+  }, 0);
+  return { plots: plots.length, plants };
+}
+
+function renderGardenLibrary() {
+  if (!els.gardenLibrary) return;
+  els.gardenLibrary.innerHTML = state.gardens
+    .slice()
+    .sort((first, second) => gardenSeason(second) - gardenSeason(first) || first.name.localeCompare(second.name))
+    .map((garden) => {
+      const summary = gardenSummary(garden);
+      const isCurrent = garden.id === state.activeGardenId;
+      return `
+        <button class="garden-library-card${isCurrent ? " active" : ""}" type="button" data-open-garden="${garden.id}">
+          <span class="garden-library-year">${gardenSeason(garden)}</span>
+          <span class="garden-library-main"><strong>${escapeHtml(garden.name)}</strong><small>${summary.plots || 0} plot${summary.plots === 1 ? "" : "s"} · ${summary.plants || 0} plants</small></span>
+          <span class="garden-library-open">Open</span>
+        </button>
+      `;
+    }).join("");
+}
+
 function renderGardenManager() {
   if (!els.gardenSelect) return;
   els.gardenSelect.innerHTML = state.gardens
-    .map((garden) => `<option value="${garden.id}"${garden.id === state.activeGardenId ? " selected" : ""}>${escapeHtml(garden.name)}</option>`)
+    .map((garden) => `<option value="${garden.id}"${garden.id === state.activeGardenId ? " selected" : ""}>${gardenSeason(garden)} · ${escapeHtml(garden.name)}</option>`)
     .join("");
   if (els.deleteGarden) els.deleteGarden.disabled = state.gardens.length < 2;
 }
@@ -935,10 +997,38 @@ function resetPlanForGarden(gardenId) {
 function createGarden() {
   const name = window.prompt("Name this garden", `Garden ${state.gardens.length + 1}`);
   if (!name) return;
+  const seasonInput = window.prompt("Which growing season is this garden for?", String(new Date().getFullYear()));
+  if (seasonInput === null) return;
+  const season = clamp(Number(seasonInput) || new Date().getFullYear(), 1900, 2200);
   savePlan();
   const id = `garden-${Date.now()}`;
-  state.gardens.push({ id, name: name.trim() || `Garden ${state.gardens.length + 1}` });
+  state.gardens.push({ id, name: name.trim() || `Garden ${state.gardens.length + 1}`, season });
   resetPlanForGarden(id);
+}
+
+function archiveCurrentGarden() {
+  const garden = activeGarden();
+  if (!garden) return;
+  const seasonInput = window.prompt("Which growing season should this archived copy use?", String(gardenSeason(garden)));
+  if (seasonInput === null) return;
+  const season = clamp(Number(seasonInput) || gardenSeason(garden), 1900, 2200);
+  const snapshot = getPlanSnapshot();
+  const id = `garden-${Date.now()}`;
+  const archive = { id, name: `${garden.name} archive`, season, archived: true };
+  state.gardens.push(archive);
+  const archivePlan = {
+    ...snapshot,
+    activeGardenId: id,
+    gardens: state.gardens,
+    activePageId: "homePage",
+    selectedPlantUid: ""
+  };
+  window.localStorage.setItem(gardenPlanKey(id), JSON.stringify(archivePlan));
+  saveGardenIndex();
+  setSaveStatus(`Archived a ${season} garden copy`);
+  renderGardenManager();
+  renderGardenLibrary();
+  queueCloudSave();
 }
 
 function renameGarden() {
@@ -1017,7 +1107,7 @@ function renderPlantPicker() {
     row.className = `plant-option${qty ? " active" : ""}`;
     const strategy = strategyForPlant(plant);
     row.innerHTML = `
-      <span class="plant-badge" style="background:${plant.color}">${plant.short.slice(0, 1)}</span>
+      <span class="plant-art" style="--plant-color:${plant.color}" aria-hidden="true">${PLANT_ART[plant.id] || "🌱"}</span>
       <span class="plant-meta">
         <strong>${plant.name}</strong>
         <span>${plant.spacing} ft spacing · ${plant.sun === "full" ? "full sun" : "part sun"} · ${titleCase(strategy.family)}${plant.packet ? " · seed packet" : ""}</span>
@@ -1025,7 +1115,7 @@ function renderPlantPicker() {
       <span class="stepper">
         <button type="button" aria-label="Remove ${plant.name}" data-action="minus" data-id="${plant.id}">-</button>
         <output>${qty}</output>
-        <button type="button" aria-label="Add ${plant.name}" data-action="plus" data-id="${plant.id}">+</button>
+        <button class="plant-add" type="button" aria-label="Add ${plant.name}" data-action="plus" data-id="${plant.id}">Add</button>
       </span>
     `;
     els.plantList.append(row);
@@ -1296,6 +1386,7 @@ function render() {
   if (els.homeZoneText) els.homeZoneText.textContent = `${climate.zone} · ${extension.source}`;
 
   renderGardenManager();
+  renderGardenLibrary();
   renderPlotTabs();
   renderPlantPicker();
   renderPlot();
@@ -1661,30 +1752,54 @@ function renderTaskPage() {
 
 function renderCalendarPage() {
   const tasks = scheduleTasks(activePlot(), climateForZip(els.zip.value));
-  const monthStart = new Date(state.calendarYear, state.calendarMonth, 1, 12);
-  const monthEnd = new Date(state.calendarYear, state.calendarMonth + 1, 0, 12);
-  const firstCell = new Date(monthStart);
-  firstCell.setDate(monthStart.getDate() - monthStart.getDay());
+  const view = ["month", "week", "day"].includes(state.calendarView) ? state.calendarView : "month";
+  const focusDate = dateFromIso(state.calendarFocusDate) || new Date(state.calendarYear, state.calendarMonth, 1, 12);
   const todayKey = isoDate(new Date());
-  const monthLabel = monthStart.toLocaleDateString("en-US", { month: "long", year: "numeric" });
-  if (els.calendarTitle) els.calendarTitle.textContent = monthLabel;
+  let days = [];
+  let weekdayHeader = "";
+  let title = "";
+  let monthStart = null;
+  let monthEnd = null;
 
-  const days = [];
-  for (let index = 0; index < 42; index += 1) {
-    const date = new Date(firstCell);
-    date.setDate(firstCell.getDate() + index);
-    days.push(date);
+  if (view === "month") {
+    monthStart = new Date(state.calendarYear, state.calendarMonth, 1, 12);
+    monthEnd = new Date(state.calendarYear, state.calendarMonth + 1, 0, 12);
+    const firstCell = new Date(monthStart);
+    firstCell.setDate(monthStart.getDate() - monthStart.getDay());
+    days = Array.from({ length: 42 }, (_, index) => {
+      const date = new Date(firstCell);
+      date.setDate(firstCell.getDate() + index);
+      return date;
+    });
+    title = monthStart.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  } else if (view === "week") {
+    const weekStart = new Date(focusDate);
+    weekStart.setDate(focusDate.getDate() - focusDate.getDay());
+    days = Array.from({ length: 7 }, (_, index) => addDays(isoDate(weekStart), index));
+    const weekEnd = days[days.length - 1];
+    title = `${formatDate(weekStart)} - ${formatDate(weekEnd)}, ${weekEnd.getFullYear()}`;
+  } else {
+    days = [focusDate];
+    title = focusDate.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
   }
 
-  const weekdayHeader = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-    .map((day) => `<div class="calendar-weekday">${day}</div>`)
-    .join("");
+  if (view !== "day") {
+    weekdayHeader = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+      .map((day) => `<div class="calendar-weekday">${day}</div>`)
+      .join("");
+  }
+  if (els.calendarTitle) els.calendarTitle.textContent = title;
+  els.calendarViewButtons.forEach((button) => {
+    const isActive = button.dataset.calendarView === view;
+    button.classList.toggle("active", isActive);
+    button.setAttribute("aria-pressed", String(isActive));
+  });
   const dayCells = days.map((date) => {
     const dateKey = isoDate(date);
     const dayTasks = tasks.filter((task) => isoDate(task.date) === dateKey);
-    const outside = date < monthStart || date > monthEnd;
+    const outside = monthStart && monthEnd && (date < monthStart || date > monthEnd);
     return `
-      <section class="calendar-day${outside ? " outside" : ""}${dateKey === todayKey ? " today" : ""}">
+      <section class="calendar-day${outside ? " outside" : ""}${dateKey === todayKey ? " today" : ""}" data-calendar-date="${dateKey}">
         <div class="calendar-day-number">${date.getDate()}</div>
         <div class="calendar-events">
           ${dayTasks.slice(0, 3).map((task) => `
@@ -1699,15 +1814,25 @@ function renderCalendarPage() {
     `;
   }).join("");
 
+  els.calendarGrid.className = `calendar-grid view-${view}`;
   els.calendarGrid.innerHTML = tasks.length
     ? `${weekdayHeader}${dayCells}`
     : `<section class="month-card"><h3>No dates yet</h3><p>Add plants to create a calendar.</p></section>`;
 }
 
 function moveCalendarMonth(offset) {
-  const next = new Date(state.calendarYear, state.calendarMonth + offset, 1, 12);
-  state.calendarMonth = next.getMonth();
-  state.calendarYear = next.getFullYear();
+  if (state.calendarView === "month") {
+    const next = new Date(state.calendarYear, state.calendarMonth + offset, 1, 12);
+    state.calendarMonth = next.getMonth();
+    state.calendarYear = next.getFullYear();
+    state.calendarFocusDate = isoDate(next);
+  } else {
+    const next = new Date(dateFromIso(state.calendarFocusDate) || new Date());
+    next.setDate(next.getDate() + offset * (state.calendarView === "week" ? 7 : 1));
+    state.calendarFocusDate = isoDate(next);
+    state.calendarMonth = next.getMonth();
+    state.calendarYear = next.getFullYear();
+  }
   renderCalendarPage();
   queueAutoSave();
 }
@@ -1716,6 +1841,15 @@ function jumpCalendarToToday() {
   const today = new Date();
   state.calendarMonth = today.getMonth();
   state.calendarYear = today.getFullYear();
+  state.calendarFocusDate = isoDate(today);
+  renderCalendarPage();
+  queueAutoSave();
+}
+
+function setCalendarView(view) {
+  if (!["month", "week", "day"].includes(view)) return;
+  state.calendarView = view;
+  if (!state.calendarFocusDate) state.calendarFocusDate = isoDate(new Date());
   renderCalendarPage();
   queueAutoSave();
 }
@@ -2225,8 +2359,18 @@ els.pageJumps.forEach((button) => {
 });
 if (els.gardenSelect) els.gardenSelect.addEventListener("change", () => switchGarden(els.gardenSelect.value));
 if (els.newGarden) els.newGarden.addEventListener("click", createGarden);
+if (els.homeNewGarden) els.homeNewGarden.addEventListener("click", createGarden);
 if (els.renameGarden) els.renameGarden.addEventListener("click", renameGarden);
+if (els.archiveGarden) els.archiveGarden.addEventListener("click", archiveCurrentGarden);
 if (els.deleteGarden) els.deleteGarden.addEventListener("click", deleteGarden);
+if (els.gardenLibrary) {
+  els.gardenLibrary.addEventListener("click", (event) => {
+    const card = event.target.closest("[data-open-garden]");
+    if (!card) return;
+    switchGarden(card.dataset.openGarden);
+    switchPage("layoutPage");
+  });
+}
 if (els.createAccount) {
   els.createAccount.addEventListener("click", async () => {
     if (!(await initCloudSave())) return;
@@ -2294,6 +2438,17 @@ if (els.signOut) {
 if (els.calendarPrev) els.calendarPrev.addEventListener("click", () => moveCalendarMonth(-1));
 if (els.calendarNext) els.calendarNext.addEventListener("click", () => moveCalendarMonth(1));
 if (els.calendarToday) els.calendarToday.addEventListener("click", jumpCalendarToToday);
+els.calendarViewButtons.forEach((button) => button.addEventListener("click", () => setCalendarView(button.dataset.calendarView)));
+if (els.calendarGrid) {
+  els.calendarGrid.addEventListener("click", (event) => {
+    const day = event.target.closest("[data-calendar-date]");
+    if (!day) return;
+    state.calendarFocusDate = day.dataset.calendarDate;
+    state.calendarMonth = dateFromIso(state.calendarFocusDate).getMonth();
+    state.calendarYear = dateFromIso(state.calendarFocusDate).getFullYear();
+    setCalendarView("day");
+  });
+}
 if (els.onboardingForm) els.onboardingForm.addEventListener("submit", applyOnboarding);
 if (els.skipOnboarding) els.skipOnboarding.addEventListener("click", closeOnboarding);
 if (els.onboardingBack) els.onboardingBack.addEventListener("click", () => setOnboardingStep(onboardingStep - 1));
