@@ -43,6 +43,22 @@ const STORAGE_KEY = "cultivaite-garden-plan-v1";
 const STORAGE_INDEX_KEY = "cultivaite-garden-index-v1";
 const ACTIVE_GARDEN_KEY = "cultivaite-active-garden-v1";
 const LEGACY_STORAGE_KEY = "sol-garden-plan-v1";
+const SUBSCRIPTION_WEBSITE_URL = "https://cultivaite-website.vercel.app/#plans";
+const AI_CREDITS_WEBSITE_URL = "https://cultivaite-website.vercel.app/#credits";
+const SUBSCRIPTION_RULES = {
+  free: {
+    label: "Free plan",
+    bedLimit: 3,
+    dailyAiCredits: 1,
+    taskList: false
+  },
+  seasonal: {
+    label: "Season plan",
+    bedLimit: Infinity,
+    dailyAiCredits: 5,
+    taskList: true
+  }
+};
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyB4lRcXrCNUHzcJeyciR-HyxiFMtYFdyEQ",
   authDomain: "cultivaite-7c0b7.firebaseapp.com",
@@ -160,6 +176,12 @@ const state = {
   calendarYear: new Date().getFullYear(),
   calendarView: "month",
   calendarFocusDate: isoDate(new Date()),
+  subscription: {
+    tier: "free",
+    aiCreditDate: isoDate(new Date()),
+    aiCreditsUsed: 0,
+    extraAiCredits: 0
+  },
   plots: [
     {
       id: "plot-1",
@@ -255,6 +277,17 @@ const els = {
   homePlotText: document.querySelector("#homePlotText"),
   homeZoneText: document.querySelector("#homeZoneText"),
   homeSaveText: document.querySelector("#homeSaveText"),
+  homePlanText: document.querySelector("#homePlanText"),
+  homeCreditText: document.querySelector("#homeCreditText"),
+  subscriptionPill: document.querySelector("#subscriptionPill"),
+  planLabel: document.querySelector("#planLabel"),
+  creditLabel: document.querySelector("#creditLabel"),
+  subscriptionDialog: document.querySelector("#subscriptionDialog"),
+  subscriptionDialogTitle: document.querySelector("#subscriptionDialogTitle"),
+  subscriptionDialogCopy: document.querySelector("#subscriptionDialogCopy"),
+  subscriptionPlansLink: document.querySelector("#subscriptionPlansLink"),
+  buyCreditsLink: document.querySelector("#buyCreditsLink"),
+  closeSubscriptionDialog: document.querySelector("#closeSubscriptionDialogBtn"),
   gardenLibrary: document.querySelector("#gardenLibrary"),
   homeNewGarden: document.querySelector("#homeNewGardenBtn"),
   headerSaveStatus: document.querySelector("#headerSaveStatus"),
@@ -309,6 +342,126 @@ const els = {
 
 let onboardingStep = 1;
 
+function normalizeSubscription(subscription = {}) {
+  const today = isoDate(new Date());
+  const tier = subscription.tier === "seasonal" ? "seasonal" : "free";
+  const aiCreditDate = /^\d{4}-\d{2}-\d{2}$/.test(subscription.aiCreditDate || "") ? subscription.aiCreditDate : today;
+  return {
+    tier,
+    aiCreditDate,
+    aiCreditsUsed: clamp(Number(subscription.aiCreditsUsed) || 0, 0, 999),
+    extraAiCredits: clamp(Number(subscription.extraAiCredits) || 0, 0, 999)
+  };
+}
+
+function currentSubscription() {
+  state.subscription = normalizeSubscription(state.subscription);
+  const today = isoDate(new Date());
+  if (state.subscription.aiCreditDate !== today) {
+    state.subscription.aiCreditDate = today;
+    state.subscription.aiCreditsUsed = 0;
+  }
+  return state.subscription;
+}
+
+function subscriptionRules() {
+  return SUBSCRIPTION_RULES[currentSubscription().tier] || SUBSCRIPTION_RULES.free;
+}
+
+function isSeasonalSubscriber() {
+  return currentSubscription().tier === "seasonal";
+}
+
+function hasTaskAccess() {
+  return Boolean(subscriptionRules().taskList);
+}
+
+function remainingAiCredits() {
+  const subscription = currentSubscription();
+  const dailyRemaining = Math.max(0, subscriptionRules().dailyAiCredits - subscription.aiCreditsUsed);
+  return dailyRemaining + subscription.extraAiCredits;
+}
+
+function spendAiCredit() {
+  const subscription = currentSubscription();
+  const dailyLimit = subscriptionRules().dailyAiCredits;
+  if (subscription.aiCreditsUsed < dailyLimit) {
+    subscription.aiCreditsUsed += 1;
+  } else if (subscription.extraAiCredits > 0) {
+    subscription.extraAiCredits -= 1;
+  }
+  renderSubscriptionStatus();
+  queueAutoSave();
+}
+
+function subscriptionDialogCopy(reason = "general") {
+  const copy = {
+    beds: {
+      title: "Unlock unlimited garden beds.",
+      body: "The free plan includes up to 3 beds. A season plan unlocks unlimited beds so testers and gardeners can plan every plot, border, and raised bed together."
+    },
+    tasks: {
+      title: "Task lists are part of season plans.",
+      body: "The free plan keeps the full calendar available. A season plan adds the full task list, checkoffs, custom tasks, and task directions."
+    },
+    ai: {
+      title: "You used today's AI credit.",
+      body: "The free plan includes 1 AI garden answer per day. Season plans include 5 AI credits per day, and extra AI credits can be purchased when you need more."
+    },
+    general: {
+      title: "Choose the plan that matches your growing season.",
+      body: "Use the free plan for a small starter garden, or choose a season plan for unlimited beds, the task list, the calendar, and more AI garden answers each day."
+    }
+  };
+  return copy[reason] || copy.general;
+}
+
+function showSubscriptionDialog(reason = "general") {
+  const message = subscriptionDialogCopy(reason);
+  if (els.subscriptionDialogTitle) els.subscriptionDialogTitle.textContent = message.title;
+  if (els.subscriptionDialogCopy) els.subscriptionDialogCopy.textContent = message.body;
+  if (els.subscriptionPlansLink) els.subscriptionPlansLink.href = SUBSCRIPTION_WEBSITE_URL;
+  if (els.buyCreditsLink) {
+    els.buyCreditsLink.href = AI_CREDITS_WEBSITE_URL;
+    els.buyCreditsLink.hidden = reason !== "ai";
+  }
+  if (!els.subscriptionDialog) {
+    window.open(SUBSCRIPTION_WEBSITE_URL, "_blank", "noopener");
+    return;
+  }
+  if (typeof els.subscriptionDialog.showModal === "function") els.subscriptionDialog.showModal();
+  else els.subscriptionDialog.setAttribute("open", "");
+}
+
+function closeSubscriptionDialog() {
+  if (!els.subscriptionDialog) return;
+  if (typeof els.subscriptionDialog.close === "function") els.subscriptionDialog.close();
+  else els.subscriptionDialog.removeAttribute("open");
+}
+
+function renderSubscriptionStatus() {
+  const subscription = currentSubscription();
+  const rules = subscriptionRules();
+  const creditsLeft = remainingAiCredits();
+  const creditText = `${creditsLeft} AI ${creditsLeft === 1 ? "credit" : "credits"} today`;
+  const planText = rules.label;
+  if (els.planLabel) els.planLabel.textContent = planText;
+  if (els.creditLabel) els.creditLabel.textContent = creditText;
+  if (els.homePlanText) els.homePlanText.textContent = isSeasonalSubscriber() ? "Season plan active" : "Free plan";
+  if (els.homeCreditText) els.homeCreditText.textContent = `${creditsLeft} left today`;
+  if (els.subscriptionPill) els.subscriptionPill.classList.toggle("seasonal", subscription.tier === "seasonal");
+  const taskNav = [...els.navButtons].find((button) => button.dataset.page === "tasksPage");
+  if (taskNav) {
+    taskNav.classList.toggle("locked", !hasTaskAccess());
+    taskNav.title = hasTaskAccess() ? "Open tasks" : "Task list unlocks with a season plan";
+  }
+  if (els.addTask) els.addTask.disabled = !hasTaskAccess();
+  if (els.markTasks) els.markTasks.disabled = !hasTaskAccess();
+  if (els.addPlot) {
+    els.addPlot.title = isSeasonalSubscriber() ? "Add another bed" : "Free plan includes up to 3 beds";
+  }
+}
+
 function activePlot() {
   return state.plots.find((plot) => plot.id === state.activePlotId);
 }
@@ -329,6 +482,7 @@ function getPlanSnapshot() {
     calendarYear: state.calendarYear,
     calendarView: state.calendarView,
     calendarFocusDate: state.calendarFocusDate,
+    subscription: currentSubscription(),
     plantLibrary,
     plots: state.plots.map((plot) => ({
       ...plot,
@@ -388,6 +542,7 @@ function applyPlanSnapshot(plan) {
   if (Array.isArray(plan.completedTasks)) state.completedTasks = plan.completedTasks;
   state.customTasks = Array.isArray(plan.customTasks) ? plan.customTasks : [];
   state.onboardingComplete = typeof plan.onboardingComplete === "boolean" ? plan.onboardingComplete : true;
+  state.subscription = normalizeSubscription(plan.subscription);
   if (Number.isInteger(plan.calendarMonth)) state.calendarMonth = plan.calendarMonth;
   if (Number.isInteger(plan.calendarYear)) state.calendarYear = plan.calendarYear;
   if (["month", "week", "day"].includes(plan.calendarView)) state.calendarView = plan.calendarView;
@@ -888,6 +1043,11 @@ function syncPlotFromControls() {
 }
 
 function addPlot() {
+  if (!isSeasonalSubscriber() && state.plots.length >= subscriptionRules().bedLimit) {
+    setSaveStatus("Free plan includes 3 beds");
+    showSubscriptionDialog("beds");
+    return;
+  }
   const nextNumber = state.plots.length + 1;
   const plot = {
     id: `plot-${Date.now()}`,
@@ -1422,6 +1582,7 @@ function render() {
   if (els.homePlotText) els.homePlotText.textContent = `${plot.name}: ${plot.width} x ${plot.length} ft`;
   if (els.homeZoneText) els.homeZoneText.textContent = `${climate.zone} · ${extension.source}`;
 
+  renderSubscriptionStatus();
   renderGardenManager();
   renderGardenLibrary();
   renderPlotTabs();
@@ -1771,6 +1932,16 @@ function renderPages() {
 }
 
 function renderTaskPage() {
+  if (!hasTaskAccess()) {
+    els.taskPageList.innerHTML = `
+      <li class="locked-feature">
+        <strong>Task list unlocks with a season plan.</strong>
+        <p>The free plan keeps your calendar available. A season plan adds the full task list, checkoffs, custom tasks, and task directions.</p>
+        <button class="primary-action" type="button" data-upgrade-trigger="tasks">View season plans</button>
+      </li>
+    `;
+    return;
+  }
   const plot = activePlot();
   const tasks = scheduleTasks(plot, climateForZip(els.zip.value));
   const today = new Date();
@@ -2030,12 +2201,20 @@ function exportPlan() {
 
 function switchPage(pageId) {
   if (!document.getElementById(pageId)) return;
+  if (pageId === "tasksPage" && !hasTaskAccess()) {
+    showSubscriptionDialog("tasks");
+    return;
+  }
   state.activePageId = pageId;
   renderPages();
   queueAutoSave();
 }
 
 function openCustomTaskDialog() {
+  if (!hasTaskAccess()) {
+    showSubscriptionDialog("tasks");
+    return;
+  }
   if (!els.customTaskDialog) return;
   if (els.customTaskDate && !els.customTaskDate.value) els.customTaskDate.value = isoDate(new Date());
   if (typeof els.customTaskDialog.showModal === "function") els.customTaskDialog.showModal();
@@ -2051,6 +2230,10 @@ function closeCustomTaskDialog() {
 
 function addCustomTask(event) {
   event.preventDefault();
+  if (!hasTaskAccess()) {
+    showSubscriptionDialog("tasks");
+    return;
+  }
   const title = els.customTaskTitle?.value.trim();
   const date = els.customTaskDate?.value;
   if (!title || !date) return;
@@ -2070,6 +2253,10 @@ function addCustomTask(event) {
 }
 
 function markNextTaskDone() {
+  if (!hasTaskAccess()) {
+    showSubscriptionDialog("tasks");
+    return;
+  }
   const task = scheduleTasks(activePlot(), climateForZip(els.zip.value)).find((item) => !state.completedTasks.includes(item.key));
   if (!task) return;
   state.completedTasks.push(task.key);
@@ -2079,6 +2266,10 @@ function markNextTaskDone() {
 }
 
 function toggleTaskComplete(taskKey) {
+  if (!hasTaskAccess()) {
+    showSubscriptionDialog("tasks");
+    return;
+  }
   if (!taskKey) return;
   const currentIndex = state.completedTasks.indexOf(taskKey);
   if (currentIndex === -1) state.completedTasks.push(taskKey);
@@ -2089,6 +2280,10 @@ function toggleTaskComplete(taskKey) {
 }
 
 function toggleTaskDetails(taskKey) {
+  if (!hasTaskAccess()) {
+    showSubscriptionDialog("tasks");
+    return;
+  }
   state.openTaskKey = state.openTaskKey === taskKey ? "" : taskKey;
   renderTaskPage();
 }
@@ -2193,6 +2388,16 @@ async function askSol(event) {
   event.preventDefault();
   const question = els.askInput.value.trim();
   if (!question) return;
+  if (remainingAiCredits() <= 0) {
+    els.chatWindow.insertAdjacentHTML("beforeend", `
+      <div class="chat-message user-message"><strong>You</strong><span>${escapeHtml(question)}</span></div>
+      <div class="chat-message sol-message"><strong>CultivAIte</strong><span>You used today's AI credit. Season plans include 5 AI credits per day, and extra credits are available if you need more garden answers today.</span></div>
+    `);
+    els.askInput.value = "";
+    els.chatWindow.scrollTop = els.chatWindow.scrollHeight;
+    showSubscriptionDialog("ai");
+    return;
+  }
 
   els.chatWindow.insertAdjacentHTML("beforeend", `
     <div class="chat-message user-message"><strong>You</strong><span>${escapeHtml(question)}</span></div>
@@ -2202,6 +2407,7 @@ async function askSol(event) {
   els.chatWindow.scrollTop = els.chatWindow.scrollHeight;
 
   let answer = "";
+  let usedLiveAi = false;
   try {
     const response = await fetch("/api/ask", {
       method: "POST",
@@ -2211,6 +2417,7 @@ async function askSol(event) {
     const data = await response.json();
     if (!response.ok || !data.answer) throw new Error(data.error || "AI answer unavailable");
     answer = data.answer;
+    usedLiveAi = true;
   } catch (error) {
     const reason = error.message ? ` Reason: ${error.message}` : "";
     answer = `${answerGardenQuestion(question)}\n\nAI backend note: I used CultivAIte's built-in garden logic because the live AI connection is not available yet.${reason}`;
@@ -2228,6 +2435,7 @@ async function askSol(event) {
     thinking.querySelector("span").textContent = answer;
   }
   lastAiAnswer = answer;
+  if (usedLiveAi) spendAiCredit();
   if (els.readResponse) els.readResponse.disabled = false;
   els.chatWindow.scrollTop = els.chatWindow.scrollHeight;
 }
@@ -2651,6 +2859,13 @@ if (els.packetImage) {
   });
 }
 if (els.scanPacket) els.scanPacket.addEventListener("click", scanSeedPacket);
+if (els.subscriptionPill) els.subscriptionPill.addEventListener("click", () => showSubscriptionDialog("general"));
+if (els.closeSubscriptionDialog) els.closeSubscriptionDialog.addEventListener("click", closeSubscriptionDialog);
+if (els.subscriptionDialog) {
+  els.subscriptionDialog.addEventListener("click", (event) => {
+    if (event.target === els.subscriptionDialog) closeSubscriptionDialog();
+  });
+}
 els.plannerForm.addEventListener("submit", (event) => {
   event.preventDefault();
   saveCurrentPlan();
@@ -2695,6 +2910,11 @@ document.addEventListener("input", (event) => {
   const field = event.target.closest("input, select, textarea");
   if (!field || field.type === "password" || field.id === "plantSearchInput") return;
   queueAutoSave();
+});
+document.addEventListener("click", (event) => {
+  const upgradeButton = event.target.closest("[data-upgrade-trigger]");
+  if (!upgradeButton) return;
+  showSubscriptionDialog(upgradeButton.dataset.upgradeTrigger || "general");
 });
 document.addEventListener("change", (event) => {
   const field = event.target.closest("input, select, textarea");
