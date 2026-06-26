@@ -32,6 +32,7 @@
           <button class="nav-btn" type="button" data-page="tasksPage">Tasks</button>
           <button class="nav-btn" type="button" data-page="calendarPage">Calendar</button>
           <button class="nav-btn" type="button" data-page="askPage">Ask</button>
+          <button class="nav-btn" type="button" data-page="profilePage">Profile</button>
         </nav>
       </header>
 
@@ -492,6 +493,96 @@
             <button id="voiceAskBtn" class="voice-ask-button" type="button" title="Ask by voice" aria-label="Ask by voice">🎙</button>
             <button type="submit">Ask</button>
           </form>
+        </section>
+      </section>
+
+      <section class="page" id="profilePage">
+        <section class="page-panel profile-page">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Garden profile</p>
+              <h2>Profile & community</h2>
+            </div>
+            <button class="profile-privacy-btn" id="profilePrivacyBtn" type="button">Private profile</button>
+          </div>
+
+          <div class="profile-grid">
+            <section class="profile-card">
+              <div class="profile-identity">
+                <span class="profile-avatar" id="profileAvatar">CG</span>
+                <div>
+                  <h3 id="profileDisplayName">CultivAIte Gardener</h3>
+                  <p id="profileHandle">@mygarden</p>
+                </div>
+              </div>
+              <form class="profile-form" id="profileForm">
+                <label>
+                  Display name
+                  <input id="profileNameInput" maxlength="60" />
+                </label>
+                <label>
+                  Handle
+                  <input id="profileHandleInput" maxlength="32" />
+                </label>
+                <label>
+                  Garden location
+                  <input id="profileLocationInput" maxlength="80" />
+                </label>
+                <label>
+                  Visibility
+                  <select id="profileVisibilityInput">
+                    <option value="private">Private</option>
+                    <option value="public">Public</option>
+                  </select>
+                </label>
+                <label class="profile-form-wide">
+                  Bio
+                  <textarea id="profileBioInput" rows="4" maxlength="220"></textarea>
+                </label>
+                <button type="submit">Save profile</button>
+              </form>
+            </section>
+
+            <section class="profile-card profile-archive">
+              <div class="section-heading compact-heading">
+                <div>
+                  <p class="eyebrow">Garden archive</p>
+                  <h3>Past and current gardens</h3>
+                </div>
+              </div>
+              <div class="garden-archive" id="profileGardenArchive"></div>
+            </section>
+          </div>
+
+          <div class="community-grid">
+            <section class="profile-card">
+              <div class="section-heading compact-heading">
+                <div>
+                  <p class="eyebrow">Garden feed</p>
+                  <h3>Share progress</h3>
+                </div>
+              </div>
+              <form class="post-form" id="postForm">
+                <label>
+                  Post update
+                  <textarea id="postTextInput" rows="4" maxlength="320" placeholder="Share what you planted, noticed, harvested, or learned."></textarea>
+                </label>
+                <label>
+                  Attach to garden
+                  <select id="postGardenInput"></select>
+                </label>
+                <button type="submit">Post</button>
+              </form>
+              <div class="community-feed" id="communityFeed"></div>
+            </section>
+
+            <section class="profile-card">
+              <p class="eyebrow">Find gardeners</p>
+              <h3>Follow gardeners</h3>
+              <p class="profile-helper">Starter community suggestions are saved for this beta. Live public profiles will use Firebase when you are ready for a larger public test.</p>
+              <div class="gardener-list" id="gardenerSuggestions"></div>
+            </section>
+          </div>
         </section>
       </section>
     </main>
