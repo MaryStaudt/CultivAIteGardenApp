@@ -162,6 +162,39 @@ const COMPANION_WARNINGS = [
   { plants: ["bean", "carrot"], note: "Beans add rotation balance near roots without taking over the whole bed." }
 ];
 
+const COMMUNITY_GARDENERS = [
+  { id: "gardener-maya", name: "Maya Green", handle: "@mayagrows", zone: "5b", focus: "Cut flowers and raised beds", avatar: "MG" },
+  { id: "gardener-eli", name: "Eli Brooks", handle: "@composteli", zone: "6a", focus: "Compost, peppers, and soil building", avatar: "EB" },
+  { id: "gardener-ana", name: "Ana Fields", handle: "@anafields", zone: "8a", focus: "Herbs, pollinators, and drought-wise beds", avatar: "AF" }
+];
+
+const DEFAULT_SOCIAL_POSTS = [
+  {
+    id: "post-welcome",
+    authorId: "gardener-maya",
+    authorName: "Maya Green",
+    handle: "@mayagrows",
+    text: "Starting tomatoes near basil this week and keeping a pollinator strip open.",
+    gardenId: "",
+    gardenName: "Summer vegetable garden",
+    createdAt: "2026-06-20T14:00:00.000Z",
+    thumbs: 3,
+    liked: false
+  },
+  {
+    id: "post-soil",
+    authorId: "gardener-eli",
+    authorName: "Eli Brooks",
+    handle: "@composteli",
+    text: "Added compost before planting cucumbers. Keeping the heavy feeders split between beds this year.",
+    gardenId: "",
+    gardenName: "Soil reset bed",
+    createdAt: "2026-06-18T17:30:00.000Z",
+    thumbs: 5,
+    liked: false
+  }
+];
+
 const state = {
   activeGardenId: "garden-main",
   gardens: [{ id: "garden-main", name: "2026 vegetable garden", season: 2026 }],
@@ -181,6 +214,17 @@ const state = {
     aiCreditDate: isoDate(new Date()),
     aiCreditsUsed: 0,
     extraAiCredits: 0
+  },
+  profile: {
+    displayName: "CultivAIte Gardener",
+    handle: "@mygarden",
+    location: "My garden",
+    bio: "Growing with CultivAIte.",
+    visibility: "private"
+  },
+  social: {
+    following: ["gardener-maya"],
+    posts: []
   },
   plots: [
     {
@@ -307,6 +351,22 @@ const els = {
   voiceAsk: document.querySelector("#voiceAskBtn"),
   readResponse: document.querySelector("#readResponseBtn"),
   chatWindow: document.querySelector("#chatWindow"),
+  profilePrivacy: document.querySelector("#profilePrivacyBtn"),
+  profileAvatar: document.querySelector("#profileAvatar"),
+  profileDisplayName: document.querySelector("#profileDisplayName"),
+  profileHandle: document.querySelector("#profileHandle"),
+  profileForm: document.querySelector("#profileForm"),
+  profileName: document.querySelector("#profileNameInput"),
+  profileHandleInput: document.querySelector("#profileHandleInput"),
+  profileLocation: document.querySelector("#profileLocationInput"),
+  profileBio: document.querySelector("#profileBioInput"),
+  profileVisibility: document.querySelector("#profileVisibilityInput"),
+  profileGardenArchive: document.querySelector("#profileGardenArchive"),
+  postForm: document.querySelector("#postForm"),
+  postText: document.querySelector("#postTextInput"),
+  postGarden: document.querySelector("#postGardenInput"),
+  communityFeed: document.querySelector("#communityFeed"),
+  gardenerSuggestions: document.querySelector("#gardenerSuggestions"),
   customTaskDialog: document.querySelector("#customTaskDialog"),
   customTaskForm: document.querySelector("#customTaskForm"),
   customTaskTitle: document.querySelector("#customTaskTitle"),
@@ -352,6 +412,57 @@ function normalizeSubscription(subscription = {}) {
     aiCreditsUsed: clamp(Number(subscription.aiCreditsUsed) || 0, 0, 999),
     extraAiCredits: clamp(Number(subscription.extraAiCredits) || 0, 0, 999)
   };
+}
+
+function normalizeHandle(handle) {
+  const cleaned = String(handle || "").trim().replace(/\s+/g, "").replace(/^@+/, "");
+  return cleaned ? `@${cleaned.toLowerCase()}` : "@mygarden";
+}
+
+function normalizeProfile(profile = {}) {
+  const displayName = String(profile.displayName || "CultivAIte Gardener").trim() || "CultivAIte Gardener";
+  const visibility = profile.visibility === "public" ? "public" : "private";
+  return {
+    displayName,
+    handle: normalizeHandle(profile.handle),
+    location: String(profile.location || "My garden").trim() || "My garden",
+    bio: String(profile.bio || "Growing with CultivAIte.").trim() || "Growing with CultivAIte.",
+    visibility
+  };
+}
+
+function normalizeSocial(social = {}) {
+  const following = Array.isArray(social.following) ? social.following.filter(Boolean) : ["gardener-maya"];
+  const savedPosts = Array.isArray(social.posts) ? social.posts : [];
+  const byId = new Map();
+  [...DEFAULT_SOCIAL_POSTS, ...savedPosts].forEach((post) => {
+    if (!post?.id) return;
+    byId.set(post.id, {
+      id: post.id,
+      authorId: post.authorId || "self",
+      authorName: post.authorName || "CultivAIte Gardener",
+      handle: normalizeHandle(post.handle || "@mygarden"),
+      text: String(post.text || "").trim(),
+      gardenId: post.gardenId || "",
+      gardenName: post.gardenName || "Garden update",
+      createdAt: post.createdAt || new Date().toISOString(),
+      thumbs: Math.max(0, Number(post.thumbs) || 0),
+      liked: Boolean(post.liked)
+    });
+  });
+  return {
+    following,
+    posts: [...byId.values()].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+  };
+}
+
+function profileInitials(name) {
+  return String(name || "CultivAIte Gardener")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || "")
+    .join("") || "CG";
 }
 
 function currentSubscription() {
@@ -483,6 +594,8 @@ function getPlanSnapshot() {
     calendarView: state.calendarView,
     calendarFocusDate: state.calendarFocusDate,
     subscription: currentSubscription(),
+    profile: normalizeProfile(state.profile),
+    social: normalizeSocial(state.social),
     plantLibrary,
     plots: state.plots.map((plot) => ({
       ...plot,
@@ -543,6 +656,8 @@ function applyPlanSnapshot(plan) {
   state.customTasks = Array.isArray(plan.customTasks) ? plan.customTasks : [];
   state.onboardingComplete = typeof plan.onboardingComplete === "boolean" ? plan.onboardingComplete : true;
   state.subscription = normalizeSubscription(plan.subscription);
+  if (plan.profile) state.profile = normalizeProfile(plan.profile);
+  if (plan.social) state.social = normalizeSocial(plan.social);
   if (Number.isInteger(plan.calendarMonth)) state.calendarMonth = plan.calendarMonth;
   if (Number.isInteger(plan.calendarYear)) state.calendarYear = plan.calendarYear;
   if (["month", "week", "day"].includes(plan.calendarView)) state.calendarView = plan.calendarView;
@@ -1923,9 +2038,234 @@ function renderSchedule(plot, climate) {
     : `<li class="schedule-item"><time class="schedule-date">Ready</time><span class="schedule-copy"><strong>No plants selected</strong><span>Add plants to create this plot's calendar.</span></span></li>`;
 }
 
+function savedPlanForGarden(garden) {
+  if (garden.id === state.activeGardenId) return { zip: els.zip?.value || "60614", plots: state.plots };
+  try {
+    return JSON.parse(window.localStorage.getItem(gardenPlanKey(garden.id)) || "{}");
+  } catch (error) {
+    return {};
+  }
+}
+
+function selectedEntriesForArchive(plot = {}) {
+  if (plot.selected instanceof Map) return [...plot.selected.entries()];
+  if (Array.isArray(plot.selected)) return plot.selected;
+  return [];
+}
+
+function archivePlantCount(plot = {}) {
+  return selectedEntriesForArchive(plot).reduce((total, [, qty]) => total + (Number(qty) || 0), 0);
+}
+
+function archiveTaskCount(plot = {}, plan = {}) {
+  try {
+    const tempPlot = { ...plot, selected: new Map(selectedEntriesForArchive(plot)), plantedDates: plot.plantedDates || {} };
+    return scheduleTasks(tempPlot, climateForZip(plan.zip || els.zip?.value || "60614")).length;
+  } catch (error) {
+    return 0;
+  }
+}
+
+function formatPostDate(dateText) {
+  const date = new Date(dateText);
+  if (Number.isNaN(date.getTime())) return "Just now";
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function renderProfilePage() {
+  if (!els.profileGardenArchive) return;
+  state.profile = normalizeProfile(state.profile);
+  state.social = normalizeSocial(state.social);
+  const profile = state.profile;
+  const visibilityLabel = profile.visibility === "public" ? "Public profile" : "Private profile";
+
+  if (els.profileAvatar) els.profileAvatar.textContent = profileInitials(profile.displayName);
+  if (els.profileDisplayName) els.profileDisplayName.textContent = profile.displayName;
+  if (els.profileHandle) els.profileHandle.textContent = `${profile.handle} · ${profile.location}`;
+  if (els.profileName) els.profileName.value = profile.displayName;
+  if (els.profileHandleInput) els.profileHandleInput.value = profile.handle;
+  if (els.profileLocation) els.profileLocation.value = profile.location;
+  if (els.profileBio) els.profileBio.value = profile.bio;
+  if (els.profileVisibility) els.profileVisibility.value = profile.visibility;
+  if (els.profilePrivacy) {
+    els.profilePrivacy.textContent = visibilityLabel;
+    els.profilePrivacy.classList.toggle("public", profile.visibility === "public");
+  }
+
+  if (els.postGarden) {
+    els.postGarden.innerHTML = state.gardens
+      .slice()
+      .sort((first, second) => gardenSeason(second) - gardenSeason(first) || first.name.localeCompare(second.name))
+      .map((garden) => `<option value="${garden.id}"${garden.id === state.activeGardenId ? " selected" : ""}>${gardenSeason(garden)} · ${escapeHtml(garden.name)}</option>`)
+      .join("");
+  }
+
+  const grouped = new Map();
+  state.gardens
+    .slice()
+    .sort((first, second) => gardenSeason(second) - gardenSeason(first) || first.name.localeCompare(second.name))
+    .forEach((garden) => {
+      const year = gardenSeason(garden);
+      if (!grouped.has(year)) grouped.set(year, []);
+      grouped.get(year).push(garden);
+    });
+
+  els.profileGardenArchive.innerHTML = grouped.size
+    ? [...grouped.entries()].map(([year, gardens]) => `
+      <section class="archive-year-group">
+        <h4>${year}</h4>
+        ${gardens.map((garden) => {
+          const plan = savedPlanForGarden(garden);
+          const plots = Array.isArray(plan.plots) ? plan.plots : [];
+          const totalPlants = plots.reduce((sum, plot) => sum + archivePlantCount(plot), 0);
+          return `
+            <article class="archive-garden-card">
+              <div class="archive-garden-top">
+                <div>
+                  <strong>${escapeHtml(garden.name)}</strong>
+                  <small>${garden.id === state.activeGardenId ? "Current garden" : garden.archived ? "Archived garden" : "Saved garden"} · ${plots.length} bed${plots.length === 1 ? "" : "s"} · ${totalPlants} plants</small>
+                </div>
+                <button type="button" data-profile-open-garden="${garden.id}">Open</button>
+              </div>
+              <div class="archive-bed-grid">
+                ${plots.length ? plots.map((plot) => `
+                  <article class="archive-bed-card">
+                    <strong>${escapeHtml(plot.name || "Bed")}</strong>
+                    <span>${Number(plot.width) || 0} x ${Number(plot.length) || 0} ft</span>
+                    <small>${archivePlantCount(plot)} plants · ${archiveTaskCount(plot, plan)} planned tasks</small>
+                  </article>
+                `).join("") : `<p class="profile-helper">No beds saved for this garden yet.</p>`}
+              </div>
+            </article>
+          `;
+        }).join("")}
+      </section>
+    `).join("")
+    : `<p class="profile-helper">Your gardens will appear here as you create and archive them.</p>`;
+
+  if (els.communityFeed) {
+    els.communityFeed.innerHTML = state.social.posts.map((post) => `
+      <article class="feed-post">
+        <div class="feed-post-header">
+          <span class="profile-avatar small">${profileInitials(post.authorName)}</span>
+          <div>
+            <strong>${escapeHtml(post.authorName)}</strong>
+            <small>${escapeHtml(post.handle)} · ${formatPostDate(post.createdAt)}</small>
+          </div>
+        </div>
+        <p>${escapeHtml(post.text)}</p>
+        <div class="feed-meta">
+          <span>${escapeHtml(post.gardenName)}</span>
+          <button class="green-thumb-button${post.liked ? " active" : ""}" type="button" data-green-thumb="${post.id}">
+            ${post.liked ? "Green Thumbed" : "Green Thumbs Up"} · ${post.thumbs}
+          </button>
+        </div>
+      </article>
+    `).join("");
+  }
+
+  if (els.gardenerSuggestions) {
+    els.gardenerSuggestions.innerHTML = COMMUNITY_GARDENERS.map((gardener) => {
+      const following = state.social.following.includes(gardener.id);
+      return `
+        <article class="gardener-card">
+          <span class="profile-avatar small">${gardener.avatar}</span>
+          <div>
+            <strong>${escapeHtml(gardener.name)}</strong>
+            <small>${escapeHtml(gardener.handle)} · Zone ${escapeHtml(gardener.zone)} · ${escapeHtml(gardener.focus)}</small>
+          </div>
+          <button class="follow-button${following ? " following" : ""}" type="button" data-follow-gardener="${gardener.id}">
+            ${following ? "Following" : "Follow"}
+          </button>
+        </article>
+      `;
+    }).join("");
+  }
+}
+
+function saveProfile(event) {
+  event.preventDefault();
+  state.profile = normalizeProfile({
+    displayName: els.profileName?.value,
+    handle: els.profileHandleInput?.value,
+    location: els.profileLocation?.value,
+    bio: els.profileBio?.value,
+    visibility: els.profileVisibility?.value
+  });
+  setSaveStatus("Profile saved");
+  renderProfilePage();
+  savePlan();
+}
+
+function updateProfileVisibilityFromSelect() {
+  state.profile = normalizeProfile({ ...state.profile, visibility: els.profileVisibility?.value });
+  renderProfilePage();
+  queueAutoSave();
+}
+
+function toggleProfileVisibility() {
+  state.profile = normalizeProfile({ ...state.profile, visibility: state.profile.visibility === "public" ? "private" : "public" });
+  renderProfilePage();
+  savePlan();
+}
+
+function addCommunityPost(event) {
+  event.preventDefault();
+  const text = els.postText?.value.trim();
+  if (!text) return;
+  const gardenId = els.postGarden?.value || state.activeGardenId;
+  const garden = state.gardens.find((item) => item.id === gardenId) || activeGarden();
+  state.profile = normalizeProfile(state.profile);
+  state.social = normalizeSocial(state.social);
+  state.social.posts.unshift({
+    id: `post-${Date.now()}`,
+    authorId: "self",
+    authorName: state.profile.displayName,
+    handle: state.profile.handle,
+    text,
+    gardenId,
+    gardenName: garden ? `${gardenSeason(garden)} · ${garden.name}` : "Garden update",
+    createdAt: new Date().toISOString(),
+    thumbs: 0,
+    liked: false
+  });
+  els.postText.value = "";
+  setSaveStatus("Post saved");
+  renderProfilePage();
+  savePlan();
+}
+
+function toggleGreenThumb(postId) {
+  state.social = normalizeSocial(state.social);
+  const post = state.social.posts.find((item) => item.id === postId);
+  if (!post) return;
+  post.liked = !post.liked;
+  post.thumbs = Math.max(0, post.thumbs + (post.liked ? 1 : -1));
+  renderProfilePage();
+  queueAutoSave();
+}
+
+function toggleFollow(gardenerId) {
+  state.social = normalizeSocial(state.social);
+  if (state.social.following.includes(gardenerId)) {
+    state.social.following = state.social.following.filter((id) => id !== gardenerId);
+  } else {
+    state.social.following.push(gardenerId);
+  }
+  renderProfilePage();
+  queueAutoSave();
+}
+
+function openProfileGarden(gardenId) {
+  if (!gardenId) return;
+  if (gardenId !== state.activeGardenId) switchGarden(gardenId);
+  switchPage("layoutPage");
+}
+
 function renderPages() {
   els.pages.forEach((page) => page.classList.toggle("active", page.id === state.activePageId));
   els.navButtons.forEach((button) => button.classList.toggle("active", button.dataset.page === state.activePageId));
+  renderProfilePage();
   renderTaskPage();
   renderCalendarPage();
   renderAskIntro();
@@ -2490,7 +2830,7 @@ function readLatestAnswer() {
 }
 
 function escapeHtml(text) {
-  return text.replace(/[&<>"']/g, (char) => ({
+  return String(text ?? "").replace(/[&<>"']/g, (char) => ({
     "&": "&amp;",
     "<": "&lt;",
     ">": "&gt;",
@@ -2921,6 +3261,31 @@ document.addEventListener("change", (event) => {
   if (!field || field.type === "password") return;
   savePlan();
 });
+if (els.profileForm) els.profileForm.addEventListener("submit", saveProfile);
+if (els.profileVisibility) els.profileVisibility.addEventListener("change", updateProfileVisibilityFromSelect);
+if (els.profilePrivacy) els.profilePrivacy.addEventListener("click", toggleProfileVisibility);
+if (els.postForm) els.postForm.addEventListener("submit", addCommunityPost);
+if (els.communityFeed) {
+  els.communityFeed.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-green-thumb]");
+    if (!button) return;
+    toggleGreenThumb(button.dataset.greenThumb);
+  });
+}
+if (els.gardenerSuggestions) {
+  els.gardenerSuggestions.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-follow-gardener]");
+    if (!button) return;
+    toggleFollow(button.dataset.followGardener);
+  });
+}
+if (els.profileGardenArchive) {
+  els.profileGardenArchive.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-profile-open-garden]");
+    if (!button) return;
+    openProfileGarden(button.dataset.profileOpenGarden);
+  });
+}
 
 loadSavedPlan();
 syncControlsFromPlot();
