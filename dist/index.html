@@ -1,0 +1,548 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#53633F" />
+    <meta name="description" content="CultivAIte helps gardeners create AI-assisted, sustainable garden layouts by ZIP code, plot size, and plant choices." />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <link rel="stylesheet" href="./src/styles.css" />
+    <title>CultivAIte</title>
+  </head>
+  <body>
+    <main class="app-root">
+      <header class="app-header">
+        <div class="brand-lockup">
+          <img class="brand-mark" src="./icons/cultivaite-beet-mark-web.png" alt="" aria-hidden="true" />
+          <div>
+            <p class="eyebrow">AI-powered garden planning</p>
+            <h1>Cultiv<span class="brand-ai">AI</span>te</h1>
+          </div>
+        </div>
+        <span class="header-save-status" id="headerSaveStatus">Ready</span>
+        <button class="subscription-pill" id="subscriptionPill" type="button" aria-label="View CultivAIte plan and AI credits">
+          <span id="planLabel">Free plan</span>
+          <strong id="creditLabel">1 AI credit today</strong>
+        </button>
+        <nav class="app-nav" aria-label="CultivAIte pages">
+          <button class="nav-btn active" type="button" data-page="homePage">Home</button>
+          <button class="nav-btn" type="button" data-page="layoutPage">Layout</button>
+          <button class="nav-btn" type="button" data-page="tasksPage">Tasks</button>
+          <button class="nav-btn" type="button" data-page="calendarPage">Calendar</button>
+          <button class="nav-btn" type="button" data-page="askPage">Ask</button>
+        </nav>
+      </header>
+
+      <section class="onboarding-panel" id="onboardingPanel" aria-label="CultivAIte setup">
+        <div class="onboarding-card">
+          <div>
+            <p class="eyebrow">Start your garden</p>
+            <h2>Let CultivAIte build your first plan.</h2>
+            <p>A few details now make every layout, task, and recommendation more useful.</p>
+          </div>
+          <ol class="onboarding-progress" aria-label="Setup progress">
+            <li class="active" data-onboarding-progress="1"><span>1</span> Garden</li>
+            <li data-onboarding-progress="2"><span>2</span> Plants</li>
+            <li data-onboarding-progress="3"><span>3</span> Season</li>
+          </ol>
+          <form class="onboarding-form" id="onboardingForm">
+            <section class="onboarding-step active" data-onboarding-step="1">
+              <p class="setup-step-label">Garden basics</p>
+              <label>
+                ZIP code
+                <input id="onboardZip" inputmode="numeric" maxlength="5" pattern="[0-9]{5}" placeholder="50161" required />
+              </label>
+              <div class="onboarding-row">
+                <label>
+                  Plot width
+                  <div class="unit-input">
+                    <input id="onboardWidth" type="number" min="2" max="60" value="12" required />
+                    <span>ft</span>
+                  </div>
+                </label>
+                <label>
+                  Plot length
+                  <div class="unit-input">
+                    <input id="onboardLength" type="number" min="2" max="80" value="18" required />
+                    <span>ft</span>
+                  </div>
+                </label>
+              </div>
+            </section>
+            <section class="onboarding-step" data-onboarding-step="2" aria-hidden="true">
+              <p class="setup-step-label">Choose a few plants</p>
+              <p class="setup-step-copy">Pick only what you want to begin with. You can search the complete plant library later.</p>
+              <fieldset class="starter-plants">
+                <legend>Starter plants</legend>
+                <label><input type="checkbox" value="tomato" checked /> Tomato</label>
+                <label><input type="checkbox" value="basil" checked /> Basil</label>
+                <label><input type="checkbox" value="lettuce" checked /> Lettuce</label>
+                <label><input type="checkbox" value="carrot" checked /> Carrot</label>
+                <label><input type="checkbox" value="marigold" checked /> Marigold</label>
+                <label><input type="checkbox" value="pepper" /> Pepper</label>
+                <label><input type="checkbox" value="cucumber" /> Cucumber</label>
+                <label><input type="checkbox" value="kale" /> Kale</label>
+              </fieldset>
+            </section>
+            <section class="onboarding-step" data-onboarding-step="3" aria-hidden="true">
+              <p class="setup-step-label">Where are you in the season?</p>
+              <p class="setup-step-copy">This helps CultivAIte build the right tasks and calendar for today.</p>
+              <label class="onboarding-check">
+                <input id="onboardAlreadyPlanted" type="checkbox" />
+                I already planted these
+              </label>
+              <div class="onboarding-date-panel" id="onboardDatePanel">
+                <label>
+                  Planted date
+                  <input id="onboardPlantedDate" type="date" />
+                </label>
+              </div>
+            </section>
+            <div class="onboarding-actions">
+              <button type="button" id="skipOnboardingBtn">Skip for now</button>
+              <div class="onboarding-actions-main">
+                <button type="button" id="onboardingBackBtn">Back</button>
+                <button type="button" id="onboardingNextBtn">Continue</button>
+                <button type="submit" id="onboardingSubmitBtn">Build my garden</button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <section class="page active" id="homePage">
+        <div class="home-grid">
+          <section class="home-hero">
+            <p class="eyebrow">Cultivate with confidence</p>
+            <h2>Open your potential.</h2>
+            <p>CultivAIte turns your ZIP code, plot size, and plant choices into personalized AI-powered guidance for every stage of the growing journey.</p>
+            <button class="primary-action" type="button" data-page-jump="layoutPage">Start planning</button>
+          </section>
+          <section class="home-status">
+            <div>
+              <span class="context-label">Current plot</span>
+              <strong id="homePlotText">Main bed</strong>
+            </div>
+            <div>
+              <span class="context-label">Growing zone</span>
+              <strong id="homeZoneText">Zone 6a</strong>
+            </div>
+            <div>
+              <span class="context-label">Saved plan</span>
+              <strong id="homeSaveText">Ready</strong>
+            </div>
+            <div>
+              <span class="context-label">Plan</span>
+              <strong id="homePlanText">Free plan</strong>
+            </div>
+            <div>
+              <span class="context-label">AI credits</span>
+              <strong id="homeCreditText">1 left today</strong>
+            </div>
+          </section>
+          <section class="home-library" aria-label="Garden library">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Garden library</p>
+                <h2>Every growing season, in one place</h2>
+              </div>
+              <button id="homeNewGardenBtn" class="library-new-button" type="button">New garden</button>
+            </div>
+            <div class="garden-library" id="gardenLibrary"></div>
+          </section>
+          <section class="trust-card" aria-label="CultivAIte guidance note">
+            <p class="eyebrow">Guidance note</p>
+            <h3>Use CultivAIte as a smart starting point.</h3>
+            <p>Garden conditions vary by location, weather, soil, pests, and plant variety. CultivAIte gives planning and education guidance, and important planting, pest, or safety decisions should be checked with local extension resources when needed.</p>
+          </section>
+        </div>
+      </section>
+
+      <section class="page" id="layoutPage">
+        <div class="app-shell">
+          <section class="planner-panel">
+        <div class="brand-row">
+          <div class="brand-lockup compact">
+            <img class="brand-mark" src="./icons/cultivaite-beet-mark-web.png" alt="" aria-hidden="true" />
+            <div>
+              <p class="eyebrow">AI-powered garden planning</p>
+              <h1>Cultiv<span class="brand-ai">AI</span>te</h1>
+            </div>
+          </div>
+          <button class="icon-button" id="shuffleBtn" type="button" title="Regenerate layout" aria-label="Regenerate layout">
+            <span aria-hidden="true">↻</span>
+          </button>
+        </div>
+
+        <section class="garden-manager" aria-label="Saved gardens">
+          <div>
+            <span class="context-label">Garden</span>
+            <select id="gardenSelect" aria-label="Choose saved garden"></select>
+          </div>
+          <div class="garden-actions">
+            <button id="newGardenBtn" type="button">New</button>
+            <button id="renameGardenBtn" type="button">Rename</button>
+            <button id="archiveGardenBtn" type="button">Archive</button>
+            <button id="deleteGardenBtn" type="button">Delete</button>
+          </div>
+          <label class="garden-cover-upload">
+            <span>Cover photo</span>
+            <input id="gardenCoverInput" type="file" accept="image/*" capture="environment" />
+          </label>
+        </section>
+
+        <form class="control-grid" id="plannerForm">
+          <label>
+            ZIP code
+            <input id="zipInput" inputmode="numeric" maxlength="5" placeholder="60614" value="60614" />
+          </label>
+          <label>
+            Plot width
+            <div class="unit-input">
+              <input id="widthInput" type="number" min="2" max="60" step="1" value="12" />
+              <span>ft</span>
+            </div>
+          </label>
+          <label>
+            Plot length
+            <div class="unit-input">
+              <input id="lengthInput" type="number" min="2" max="80" step="1" value="18" />
+              <span>ft</span>
+            </div>
+          </label>
+          <label>
+            Layout goal
+            <select id="goalInput">
+              <option value="balanced">Balanced harvest</option>
+              <option value="pollinator">Pollinator friendly</option>
+              <option value="compact">Compact spacing</option>
+              <option value="lowWater">Lower water</option>
+            </select>
+          </label>
+          <label>
+            Sun exposure
+            <select id="sunExposureInput">
+              <option value="full">Full sun (6+ hours)</option>
+              <option value="part">Part sun (4-6 hours)</option>
+              <option value="shade">Mostly shade (under 4 hours)</option>
+            </select>
+          </label>
+          <label>
+            Strongest sun comes from
+            <select id="sunDirectionInput">
+              <option value="south">South</option>
+              <option value="east">East</option>
+              <option value="west">West</option>
+              <option value="north">North</option>
+              <option value="unknown">Not sure</option>
+            </select>
+          </label>
+          <label>
+            Soil profile
+            <select id="soilProfileInput">
+              <option value="balanced">Balanced garden soil</option>
+              <option value="lowFertility">Low fertility / needs compost</option>
+              <option value="sandy">Sandy / dries quickly</option>
+              <option value="clay">Clay / drains slowly</option>
+              <option value="rich">Compost-rich soil</option>
+            </select>
+          </label>
+        </form>
+
+        <section class="plot-manager" aria-label="Garden plots">
+          <div class="section-heading">
+            <h2>Plots</h2>
+            <button id="addPlotBtn" type="button">Add plot</button>
+          </div>
+          <div class="plot-tabs" id="plotTabs"></div>
+        </section>
+
+        <div class="context-card">
+          <div>
+            <span class="context-label">Growing context</span>
+            <strong id="zoneText">Zone 6a · Last frost Apr 24</strong>
+            <a class="zone-source" href="https://planthardiness.ars.usda.gov/" target="_blank" rel="noreferrer">Check USDA map</a>
+          </div>
+          <div>
+            <span class="context-label">Plan density</span>
+            <strong id="densityText">Comfortable</strong>
+          </div>
+          <div>
+            <span class="context-label">Plan status</span>
+            <strong id="saveStatus">Ready to save</strong>
+          </div>
+          <div>
+            <span class="context-label">Manual save</span>
+            <button id="saveNowBtn" class="save-now" type="button">Save now</button>
+          </div>
+        </div>
+
+        <section class="plant-picker" aria-label="Plant picker">
+          <div class="section-heading">
+            <h2>Plants</h2>
+            <span id="plantCount">0 selected</span>
+          </div>
+          <label class="plant-search">
+            Search plant library
+            <input id="plantSearchInput" type="search" placeholder="Try tomato, basil, carrot, kale..." />
+          </label>
+          <div class="plant-list" id="plantList"></div>
+        </section>
+
+        <form class="custom-plant" id="customPlantForm">
+          <div class="section-heading">
+            <h2>Add a plant</h2>
+          </div>
+          <label>
+            Plant name
+            <input id="customPlantName" placeholder="Kale" />
+          </label>
+          <details class="seed-packet-panel">
+            <summary>Seed packet details</summary>
+            <label>
+              Packet photo
+              <input id="packetImageInput" type="file" accept="image/*" capture="environment" />
+              <span id="packetImageStatus" class="packet-image-status">No packet photo attached</span>
+            </label>
+            <button id="scanPacketBtn" class="packet-scan-button" type="button">Read packet photo</button>
+            <div class="seed-packet-grid">
+              <label>
+                Sun
+                <select id="packetSunInput">
+                  <option value="">Let CultivAIte decide</option>
+                  <option value="full">Full sun</option>
+                  <option value="part">Part sun</option>
+                </select>
+              </label>
+              <label>
+                Spacing
+                <div class="unit-input">
+                  <input id="packetSpacingInput" type="number" min="0.25" max="8" step="0.25" placeholder="1.5" />
+                  <span>ft</span>
+                </div>
+              </label>
+              <label>
+                Days to germinate
+                <input id="packetGermInput" type="number" min="1" max="60" placeholder="7" />
+              </label>
+              <label>
+                Days to maturity
+                <input id="packetMaturityInput" type="number" min="15" max="220" placeholder="65" />
+              </label>
+              <label>
+                Planting depth
+                <input id="packetDepthInput" placeholder="1/4 inch" />
+              </label>
+              <label>
+                Planting method
+                <select id="packetMethodInput">
+                  <option value="">Let CultivAIte decide</option>
+                  <option value="direct">Direct sow</option>
+                  <option value="indoor">Start indoors</option>
+                  <option value="transplant">Transplant seedling</option>
+                </select>
+              </label>
+            </div>
+            <label>
+              Packet notes
+              <textarea id="packetNotesInput" rows="3" placeholder="Example: thin to 12 inches, harvest when pods are firm"></textarea>
+            </label>
+          </details>
+          <p class="auto-plant-note">CultivAIte fills sun, spacing, timing, and care defaults automatically. Packet details override the defaults.</p>
+          <button id="customPlantBtn" type="submit">Add to plot</button>
+        </form>
+
+        <section class="cloud-card" aria-label="Cloud save">
+          <div class="cloud-summary">
+            <div>
+              <span class="context-label">Account save</span>
+              <h2>Cloud save</h2>
+            </div>
+            <span class="cloud-badge" id="cloudAccountBadge">Local only</span>
+            <p id="cloudStatus">Local device save is active. Add Firebase keys to turn on account saving.</p>
+          </div>
+          <div class="cloud-controls">
+            <div class="cloud-signin-fields" id="cloudSignInFields">
+              <input id="cloudEmail" type="email" autocomplete="email" placeholder="Email" />
+              <input id="cloudPassword" type="password" autocomplete="current-password" placeholder="Password" />
+            </div>
+            <div class="cloud-action-row">
+              <button id="createAccountBtn" type="button">Create account</button>
+              <button id="signInBtn" type="button">Sign in</button>
+              <button id="resetPasswordBtn" type="button">Reset password</button>
+              <button id="syncCloudBtn" type="button">Sync now</button>
+              <button id="signOutBtn" type="button">Sign out</button>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <section class="garden-stage">
+        <div class="toolbar">
+          <div>
+            <p class="eyebrow">Scaled plot</p>
+            <h2 id="plotTitle">Main bed: 12 x 18 ft</h2>
+          </div>
+          <div class="legend">
+            <span><i class="sun"></i> full sun</span>
+            <span><i class="part"></i> part sun</span>
+            <span><i class="shade"></i> shade</span>
+          </div>
+          <button id="resetLayoutBtn" class="reset-layout" type="button">Reset layout</button>
+        </div>
+        <div class="plot-wrap">
+          <div class="dimension-label dimension-width" id="widthLabel">12 ft wide</div>
+          <div class="dimension-label dimension-length" id="lengthLabel">18 ft long</div>
+          <div class="access-path vertical" aria-hidden="true"></div>
+          <div class="access-path horizontal" aria-hidden="true"></div>
+          <div class="plot" id="plot" aria-label="Interactive garden plot"></div>
+        </div>
+        <div class="plant-editor" id="plantEditor" aria-live="polite">
+          <div>
+            <span class="context-label">Plant editor</span>
+            <strong id="selectedPlantText">Tap a plant to edit it</strong>
+          </div>
+          <label class="planted-date-field">
+            Planted on
+            <input id="plantedDateInput" type="date" />
+          </label>
+          <div class="nudge-pad" aria-label="Move selected plant">
+            <button type="button" data-nudge="up" aria-label="Move selected plant up">↑</button>
+            <button type="button" data-nudge="left" aria-label="Move selected plant left">←</button>
+            <button type="button" data-nudge="down" aria-label="Move selected plant down">↓</button>
+            <button type="button" data-nudge="right" aria-label="Move selected plant right">→</button>
+          </div>
+          <div class="editor-actions">
+            <button id="centerPlantBtn" type="button">Center</button>
+            <button id="removePlantBtn" type="button">Remove</button>
+          </div>
+        </div>
+        <div class="insight-strip" id="insightStrip"></div>
+      </section>
+
+      <aside class="schedule-panel">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Companion schedule</p>
+            <h2>Next steps</h2>
+          </div>
+          <button id="exportBtn" type="button">Export</button>
+        </div>
+        <ol class="schedule-list" id="scheduleList"></ol>
+          </aside>
+        </div>
+      </section>
+
+      <section class="page" id="tasksPage">
+        <section class="page-panel">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Work list</p>
+              <h2>Tasks</h2>
+            </div>
+            <div class="task-page-actions">
+              <button id="addTaskBtn" type="button">Add task</button>
+              <button id="markTasksBtn" type="button">Mark next task done</button>
+            </div>
+          </div>
+          <ol class="schedule-list page-list" id="taskPageList"></ol>
+        </section>
+      </section>
+
+      <section class="page" id="calendarPage">
+        <section class="page-panel">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Season view</p>
+              <h2>Calendar</h2>
+            </div>
+            <div class="calendar-controls">
+              <button id="calendarPrevBtn" type="button">Previous</button>
+              <button id="calendarTodayBtn" type="button">Today</button>
+              <button id="calendarNextBtn" type="button">Next</button>
+            </div>
+          </div>
+          <div class="calendar-view-switch" aria-label="Calendar view">
+            <button type="button" data-calendar-view="month">Month</button>
+            <button type="button" data-calendar-view="week">Week</button>
+            <button type="button" data-calendar-view="day">Day</button>
+          </div>
+          <div class="calendar-title" id="calendarTitle">Month Year</div>
+          <div class="calendar-grid" id="calendarGrid"></div>
+        </section>
+      </section>
+
+      <section class="page" id="askPage">
+        <section class="page-panel ask-panel">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Ask CultivAIte</p>
+              <h2>Garden assistant</h2>
+            </div>
+            <button id="readResponseBtn" class="icon-button" type="button" title="Read latest answer aloud" aria-label="Read latest answer aloud" disabled>🔊</button>
+          </div>
+          <div class="trust-card compact" aria-label="Ask CultivAIte guidance note">
+            <p><strong>Guidance note:</strong> CultivAIte answers from your garden plan, USDA zone, and extension-style guidance. Verify pesticide, safety, and highly local decisions with product labels or local extension resources.</p>
+          </div>
+          <div class="chat-window" id="chatWindow"></div>
+          <form class="ask-form" id="askForm">
+            <input id="askInput" placeholder="Ask about watering, pests, spacing, or what to plant next" />
+            <button id="voiceAskBtn" class="voice-ask-button" type="button" title="Ask by voice" aria-label="Ask by voice">🎙</button>
+            <button type="submit">Ask</button>
+          </form>
+        </section>
+      </section>
+    </main>
+
+    <dialog class="task-dialog" id="customTaskDialog">
+      <form id="customTaskForm" method="dialog">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Personal reminder</p>
+            <h2>Add a task</h2>
+          </div>
+          <button id="closeTaskDialogBtn" class="icon-button" type="button" aria-label="Close">×</button>
+        </div>
+        <label>
+          Task
+          <input id="customTaskTitle" required maxlength="100" placeholder="Example: Pick up compost" />
+        </label>
+        <label>
+          Date
+          <input id="customTaskDate" type="date" required />
+        </label>
+        <label>
+          Notes
+          <textarea id="customTaskNotes" rows="3" maxlength="280" placeholder="Optional details"></textarea>
+        </label>
+        <button type="submit">Save task</button>
+      </form>
+    </dialog>
+
+    <dialog class="subscription-dialog" id="subscriptionDialog">
+      <div class="subscription-card">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Season access</p>
+            <h2 id="subscriptionDialogTitle">Unlock the full growing season.</h2>
+          </div>
+          <button id="closeSubscriptionDialogBtn" class="icon-button" type="button" aria-label="Close">×</button>
+        </div>
+        <p id="subscriptionDialogCopy">Season plans unlock unlimited beds, the full task list, the calendar, and more AI garden answers each day.</p>
+        <div class="subscription-plan-grid" aria-label="Plan summary">
+          <div><span>Free</span><strong>3 beds</strong><small>Calendar access and 1 AI credit per day.</small></div>
+          <div><span>Season plan</span><strong>Unlimited beds</strong><small>Tasks, calendar, and 5 AI credits per day.</small></div>
+          <div><span>Extra credits</span><strong>Add more</strong><small>Buy AI credits when daily answers run out.</small></div>
+        </div>
+        <div class="subscription-actions">
+          <a class="primary-action" id="subscriptionPlansLink" href="https://cultivaite-website.vercel.app/#plans" target="_blank" rel="noreferrer">View season plans</a>
+          <a class="secondary-action" id="buyCreditsLink" href="https://cultivaite-website.vercel.app/#credits" target="_blank" rel="noreferrer">Buy AI credits</a>
+        </div>
+      </div>
+    </dialog>
+
+    <script src="./src/standalone.js"></script>
+  </body>
+</html>
