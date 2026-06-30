@@ -2,6 +2,7 @@ const OPENAI_URL = "https://api.openai.com/v1/responses";
 const OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
 const DEFAULT_MODEL = "gpt-4.1-mini";
 const FALLBACK_MODEL = "gpt-4o-mini";
+const TRUSTED_SOURCE_VECTOR_STORE_ENV = "OPENAI_TRUSTED_SOURCES_VECTOR_STORE_ID";
 
 function sendJson(response, status, body) {
   response.statusCode = status;
@@ -86,6 +87,50 @@ function collectText(value, results = []) {
   return results;
 }
 
+function getTrustedVectorStoreIds() {
+  const rawValue = process.env[TRUSTED_SOURCE_VECTOR_STORE_ENV] || process.env.OPENAI_VECTOR_STORE_ID || "";
+  return rawValue
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+}
+
+function isTruthy(value) {
+  return ["1", "true", "yes", "required"].includes(String(value || "").toLowerCase());
+}
+
+function collectFileCitations(value, results = new Map()) {
+  if (!value) return results;
+  if (Array.isArray(value)) {
+    value.forEach((item) => collectFileCitations(item, results));
+    return results;
+  }
+  if (typeof value !== "object") return results;
+
+  const fileId = value.file_id || value.fileId;
+  const filename = value.filename || value.file_name || value.title || value.name;
+  const citationType = value.type || "";
+  if ((fileId || filename) && String(citationType).includes("file")) {
+    const key = filename || fileId;
+    results.set(key, {
+      filename: filename || "",
+      fileId: fileId || ""
+    });
+  }
+
+  Object.values(value).forEach((child) => collectFileCitations(child, results));
+  return results;
+}
+
+function addSourceNote(answer, citations) {
+  const sources = Array.from(citations.values())
+    .map((source) => source.filename || source.fileId)
+    .filter(Boolean);
+
+  if (!sources.length || /sources checked:/i.test(answer)) return answer;
+  return `${answer}\n\nSources checked: ${[...new Set(sources)].slice(0, 6).join(", ")}`;
+}
+
 async function callOpenAI(payload, apiKey, model) {
   const response = await fetch(OPENAI_URL, {
     method: "POST",
@@ -152,10 +197,24 @@ module.exports = async function handler(request, response) {
 
     const gardenContext = compactContext(context);
     const modelCandidates = [...new Set([process.env.OPENAI_MODEL, DEFAULT_MODEL, FALLBACK_MODEL].filter(Boolean))];
+    const trustedVectorStoreIds = getTrustedVectorStoreIds();
+    const trustedSearchEnabled = trustedVectorStoreIds.length > 0;
+    const trustedSourcesRequired = isTruthy(process.env.OPENAI_REQUIRE_TRUSTED_SOURCES);
+
+    if (trustedSourcesRequired && !trustedSearchEnabled) {
+      sendJson(response, 503, {
+        error: `${TRUSTED_SOURCE_VECTOR_STORE_ENV} is not set yet. Add your OpenAI vector store ID in Vercel to require trusted-source answers.`
+      });
+      return;
+    }
+
     const systemPrompt = [
       "You are CultivAIte, an AI gardening assistant for a sustainable garden planning web app.",
       "Use plain, practical language for home gardeners.",
       "Base advice first on the provided garden context: ZIP, ZIP source, USDA zone, frost timing, plot dimensions, plant list, spacing, crop families, soil demand, and warnings.",
+      trustedSearchEnabled
+        ? "Trusted source search is connected. Before answering, use the file_search tool to find the most relevant trusted source passages. Use the retrieved trusted source passages plus the provided garden context for factual claims about planting dates, pests, disease, soil, spacing, planting depth, companion planting, water needs, sun, and safety-sensitive guidance. If the retrieved trusted sources do not cover the question, say that the trusted source library does not yet cover that detail and give a cautious next step. End source-backed answers with a short 'Sources checked:' line naming the documents or organizations used."
+        : "Trusted source search is not connected yet. Use the provided garden context and clearly say when a detail should be verified with local extension guidance.",
       "If the user's question includes a ZIP code that differs from the planner ZIP, prioritize the ZIP from the question and briefly say so.",
       "When discussing regional facts, prefer the USDA zone and extension-style guidance already provided in the garden context. If exact local extension data is not available, say what should be verified locally.",
       "Do not give medical, pesticide-label, or legal certainty. For pesticide use, tell the user to follow the product label and local extension guidance.",
@@ -178,19 +237,36 @@ module.exports = async function handler(request, response) {
         }
       ]
     };
+    if (trustedSearchEnabled) {
+      payload.tools = [
+        {
+          type: "file_search",
+          vector_store_ids: trustedVectorStoreIds
+        }
+      ];
+      payload.tool_choice = "required";
+    }
 
     let answer = "";
+    let citations = new Map();
     let lastError;
     for (const model of modelCandidates) {
       try {
         const data = await callOpenAI(payload, apiKey, model);
+        citations = collectFileCitations(data);
         answer = extractAnswer(data);
+        if (answer) answer = addSourceNote(answer, citations);
         if (answer) break;
         lastError = new Error("OpenAI returned an empty Responses API answer.");
       } catch (error) {
         lastError = error;
       }
     }
+
+    if (!answer && trustedSearchEnabled) {
+      throw lastError || new Error("Trusted source search was enabled, but CultivAIte could not get a sourced answer.");
+    }
+
     if (!answer) {
       for (const model of modelCandidates) {
         try {
@@ -206,7 +282,12 @@ module.exports = async function handler(request, response) {
     if (!answer) throw lastError || new Error("OpenAI request failed.");
 
     sendJson(response, 200, {
-      answer
+      answer,
+      trustedSourceSearch: {
+        enabled: trustedSearchEnabled,
+        vectorStoreConfigured: trustedSearchEnabled,
+        citations: Array.from(citations.values())
+      }
     });
   } catch (error) {
     sendJson(response, 500, { error: error.message || "CultivAIte AI could not answer right now." });
