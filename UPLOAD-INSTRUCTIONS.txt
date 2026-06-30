@@ -1,0 +1,19 @@
+Upload these files to the matching places in your CultivAIte GitHub repository:
+
+1. api/ask.js
+   Replace your existing api/ask.js file.
+
+2. trusted-sources/VECTOR-STORE-SETUP.md
+   Add this new file inside the trusted-sources folder.
+
+3. README.md
+   Replace your existing README.md file if you want the notes in GitHub.
+
+4. .env.example
+   This is only a reference file. If GitHub/Finder hides it, do not stress.
+   The real important Vercel setting is:
+
+   OPENAI_TRUSTED_SOURCES_VECTOR_STORE_ID
+
+After uploading, go to Vercel and add that environment variable with your OpenAI vector store ID.
+The ID starts with vs_.
