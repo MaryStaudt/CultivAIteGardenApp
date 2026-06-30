@@ -12,6 +12,7 @@ src/styles.css          Visual design
 src/standalone.js       App behavior, saving, layout, calendar, Ask page
 api/ask.js              Vercel backend for Ask CultivAIte and OpenAI
 icons/                  Installable app icons
+trusted-sources/        AI guardrails and reliable source starters
 manifest.webmanifest    Installable web app settings
 sw.js                   Offline/install cache helper
 vercel.json             Vercel deployment settings
@@ -56,6 +57,26 @@ Optional:
 
 ```text
 OPENAI_MODEL=gpt-4.1-mini
+OPENAI_TRUSTED_SOURCES_VECTOR_STORE_ID=vs_your_trusted_sources_vector_store_id
+```
+
+## Trusted Source Search
+
+CultivAIte can use OpenAI File Search before answering Ask-page questions.
+
+In plain terms:
+
+1. Put approved PDFs and guides in an OpenAI vector store.
+2. Copy the vector store ID. It starts with `vs_`.
+3. Add that ID to Vercel as `OPENAI_TRUSTED_SOURCES_VECTOR_STORE_ID`.
+4. Redeploy the app.
+
+After that, CultivAIte will search those approved sources before answering and will ask the AI to include a short sources line when it uses them.
+
+See:
+
+```text
+trusted-sources/VECTOR-STORE-SETUP.md
 ```
 
 ## Firebase Comes Next
