@@ -1,0 +1,36 @@
+{
+  "version": "0.1",
+  "lastUpdated": "2026-06-30",
+  "sources": [
+    {
+      "id": "usda-hardiness-zone-map",
+      "title": "USDA Plant Hardiness Zone Map",
+      "organization": "USDA Agricultural Research Service",
+      "type": "government",
+      "url": "https://planthardiness.ars.usda.gov/",
+      "topics": ["hardiness zone", "zip code", "climate"],
+      "priority": "primary",
+      "notes": "Use for USDA hardiness zone estimates. Hardiness zone does not replace local frost-date guidance."
+    },
+    {
+      "id": "local-university-extension",
+      "title": "Local university extension guidance",
+      "organization": "Land-grant university extension offices",
+      "type": "extension",
+      "url": "",
+      "topics": ["planting dates", "pests", "disease", "soil", "crop guidance", "local climate"],
+      "priority": "primary",
+      "notes": "Use the extension guidance closest to the user's ZIP code or region whenever possible."
+    },
+    {
+      "id": "seed-packet-user-upload",
+      "title": "User seed packet details",
+      "organization": "User-provided source",
+      "type": "user-upload",
+      "url": "",
+      "topics": ["spacing", "planting depth", "days to maturity", "sun", "germination", "variety details"],
+      "priority": "specific-variety",
+      "notes": "Use only for the specific plant or variety the user uploaded. If the image or text is unclear, ask the user to confirm."
+    }
+  ]
+}
