@@ -4,6 +4,20 @@ This folder is the source library and rulebook for CultivAIte's AI guidance.
 
 The goal is simple: when CultivAIte gives garden advice, it should prefer reliable gardening sources over general internet-style guesses.
 
+## Approved Sources Only
+
+Only approved sources belong here.
+
+Approved source types:
+
+- USDA
+- University Extension Offices
+- Land-grant universities
+- Peer-reviewed gardening or agriculture papers
+- Expert-reviewed CultivAIte guides
+
+Do not include blogs, Reddit, Pinterest, random websites, unreviewed social media posts, or AI-written articles.
+
 ## Source Priority
 
 Use trusted sources in this order:

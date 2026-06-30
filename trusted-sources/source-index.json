@@ -1,6 +1,30 @@
 {
   "version": "0.1",
   "lastUpdated": "2026-06-30",
+  "folderRule": "Only approved trusted source files belong in this folder.",
+  "allowedSourceTypes": [
+    "USDA",
+    "University Extension Offices",
+    "Land-grant universities",
+    "Peer-reviewed gardening or agriculture papers",
+    "Expert-reviewed CultivAIte guides",
+    "User-uploaded seed packet information for the user's specific plant or variety"
+  ],
+  "blockedSourceTypes": [
+    "Blogs",
+    "Reddit",
+    "Pinterest",
+    "Random websites",
+    "AI-written articles",
+    "Unreviewed social media posts",
+    "Product marketing pages unless the question is specifically about that product label"
+  ],
+  "exampleApprovedFileNames": [
+    "usda-hardiness-zones.pdf",
+    "cornell-tomatoes.pdf",
+    "extension-composting.pdf",
+    "minnesota-seed-starting.pdf"
+  ],
   "sources": [
     {
       "id": "usda-hardiness-zone-map",
