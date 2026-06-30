@@ -204,6 +204,8 @@ const state = {
   completedTasks: [],
   customTasks: [],
   openTaskKey: "",
+  journalEntries: [],
+  journalRange: "all",
   onboardingComplete: false,
   calendarMonth: new Date().getMonth(),
   calendarYear: new Date().getFullYear(),
@@ -346,6 +348,14 @@ const els = {
   calendarToday: document.querySelector("#calendarTodayBtn"),
   calendarNext: document.querySelector("#calendarNextBtn"),
   calendarViewButtons: document.querySelectorAll("[data-calendar-view]"),
+  journalGardenName: document.querySelector("#journalGardenName"),
+  journalForm: document.querySelector("#journalForm"),
+  journalText: document.querySelector("#journalTextInput"),
+  journalPhoto: document.querySelector("#journalPhotoInput"),
+  journalPhotoStatus: document.querySelector("#journalPhotoStatus"),
+  journalPhotoPreview: document.querySelector("#journalPhotoPreview"),
+  journalEntryList: document.querySelector("#journalEntryList"),
+  journalRangeButtons: document.querySelectorAll("[data-journal-range]"),
   askForm: document.querySelector("#askForm"),
   askInput: document.querySelector("#askInput"),
   voiceAsk: document.querySelector("#voiceAskBtn"),
@@ -454,6 +464,36 @@ function normalizeSocial(social = {}) {
     following,
     posts: [...byId.values()].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
   };
+}
+
+function normalizeJournalEntries(entries = []) {
+  if (!Array.isArray(entries)) return [];
+  return entries
+    .map((entry) => {
+      const createdAt = entry?.createdAt && !Number.isNaN(new Date(entry.createdAt).getTime())
+        ? entry.createdAt
+        : new Date().toISOString();
+      const photos = Array.isArray(entry?.photos)
+        ? entry.photos
+          .filter((photo) => photo?.src)
+          .slice(0, 6)
+          .map((photo) => ({
+            id: photo.id || `photo-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            src: String(photo.src),
+            name: String(photo.name || "Journal photo")
+          }))
+        : [];
+      return {
+        id: entry?.id || `journal-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        gardenId: entry?.gardenId || state.activeGardenId,
+        gardenName: String(entry?.gardenName || activeGarden()?.name || "Garden"),
+        text: String(entry?.text || "").trim(),
+        createdAt,
+        photos
+      };
+    })
+    .filter((entry) => entry.text || entry.photos.length)
+    .sort((first, second) => new Date(second.createdAt) - new Date(first.createdAt));
 }
 
 function profileInitials(name) {
@@ -588,6 +628,8 @@ function getPlanSnapshot() {
     selectedPlantUid: state.selectedPlantUid,
     completedTasks: state.completedTasks,
     customTasks: state.customTasks,
+    journalEntries: normalizeJournalEntries(state.journalEntries),
+    journalRange: state.journalRange,
     onboardingComplete: state.onboardingComplete,
     calendarMonth: state.calendarMonth,
     calendarYear: state.calendarYear,
@@ -654,6 +696,8 @@ function applyPlanSnapshot(plan) {
   if (plan.selectedPlantUid) state.selectedPlantUid = plan.selectedPlantUid;
   if (Array.isArray(plan.completedTasks)) state.completedTasks = plan.completedTasks;
   state.customTasks = Array.isArray(plan.customTasks) ? plan.customTasks : [];
+  state.journalEntries = normalizeJournalEntries(plan.journalEntries);
+  if (["all", "year", "month", "week"].includes(plan.journalRange)) state.journalRange = plan.journalRange;
   state.onboardingComplete = typeof plan.onboardingComplete === "boolean" ? plan.onboardingComplete : true;
   state.subscription = normalizeSubscription(plan.subscription);
   if (plan.profile) state.profile = normalizeProfile(plan.profile);
@@ -1197,19 +1241,22 @@ function gardenSeason(garden = {}) {
 function gardenSummary(garden) {
   const active = garden.id === state.activeGardenId;
   let plots = active ? state.plots : [];
+  let journalEntries = active ? state.journalEntries : [];
   if (!active) {
     try {
       const saved = JSON.parse(window.localStorage.getItem(gardenPlanKey(garden.id)) || "{}");
       plots = Array.isArray(saved.plots) ? saved.plots : [];
+      journalEntries = Array.isArray(saved.journalEntries) ? saved.journalEntries : [];
     } catch (error) {
       plots = [];
+      journalEntries = [];
     }
   }
   const plants = plots.reduce((total, plot) => {
     const selected = Array.isArray(plot.selected) ? plot.selected : plot.selected instanceof Map ? [...plot.selected.entries()] : [];
     return total + selected.reduce((count, [, quantity]) => count + (Number(quantity) || 0), 0);
   }, 0);
-  return { plots: plots.length, plants };
+  return { plots: plots.length, plants, journalEntries: normalizeJournalEntries(journalEntries).length };
 }
 
 function renderGardenLibrary() {
@@ -1226,7 +1273,7 @@ function renderGardenLibrary() {
       return `
         <button class="garden-library-card${isCurrent ? " active" : ""}" type="button" data-open-garden="${garden.id}">
           ${cover}
-          <span class="garden-library-main"><strong>${escapeHtml(garden.name)}</strong><small>${summary.plots || 0} plot${summary.plots === 1 ? "" : "s"} · ${summary.plants || 0} plants</small></span>
+          <span class="garden-library-main"><strong>${escapeHtml(garden.name)}</strong><small>${summary.plots || 0} plot${summary.plots === 1 ? "" : "s"} · ${summary.plants || 0} plants · ${summary.journalEntries || 0} journal ${summary.journalEntries === 1 ? "entry" : "entries"}</small></span>
           <span class="garden-library-year">${gardenSeason(garden)}</span>
         </button>
       `;
@@ -1288,6 +1335,8 @@ function resetPlanForGarden(gardenId) {
   state.selectedPlantUid = "";
   state.completedTasks = [];
   state.customTasks = [];
+  state.journalEntries = [];
+  state.journalRange = "all";
   state.onboardingComplete = true;
   state.plots.splice(0, state.plots.length, {
     id: state.activePlotId,
@@ -2118,12 +2167,13 @@ function renderProfilePage() {
           const plan = savedPlanForGarden(garden);
           const plots = Array.isArray(plan.plots) ? plan.plots : [];
           const totalPlants = plots.reduce((sum, plot) => sum + archivePlantCount(plot), 0);
+          const journalCount = normalizeJournalEntries(plan.journalEntries).length;
           return `
             <article class="archive-garden-card">
               <div class="archive-garden-top">
                 <div>
                   <strong>${escapeHtml(garden.name)}</strong>
-                  <small>${garden.id === state.activeGardenId ? "Current garden" : garden.archived ? "Archived garden" : "Saved garden"} · ${plots.length} bed${plots.length === 1 ? "" : "s"} · ${totalPlants} plants</small>
+                  <small>${garden.id === state.activeGardenId ? "Current garden" : garden.archived ? "Archived garden" : "Saved garden"} · ${plots.length} bed${plots.length === 1 ? "" : "s"} · ${totalPlants} plants · ${journalCount} journal ${journalCount === 1 ? "entry" : "entries"}</small>
                 </div>
                 <button type="button" data-profile-open-garden="${garden.id}">Open</button>
               </div>
@@ -2156,8 +2206,14 @@ function renderProfilePage() {
         <p>${escapeHtml(post.text)}</p>
         <div class="feed-meta">
           <span>${escapeHtml(post.gardenName)}</span>
-          <button class="green-thumb-button${post.liked ? " active" : ""}" type="button" data-green-thumb="${post.id}">
-            ${post.liked ? "Green Thumbed" : "Green Thumbs Up"} · ${post.thumbs}
+          <button class="green-thumb-button${post.liked ? " active" : ""}" type="button" data-green-thumb="${post.id}" aria-label="${post.liked ? "Remove green thumbs up" : "Give green thumbs up"}" title="${post.liked ? "Remove green thumbs up" : "Give green thumbs up"}">
+            <span class="green-thumb-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false">
+                <path d="M7 10v11" />
+                <path d="M15 6.6 14 10h4.9c.8 0 1.4.7 1.2 1.5l-1.3 6.4A3 3 0 0 1 15.9 20H5.8A1.8 1.8 0 0 1 4 18.2v-6.4A1.8 1.8 0 0 1 5.8 10H8c1.2-1.5 2.1-3.1 2.7-4.9.3-.9 1.1-1.5 2.1-1.3 1.3.2 2.2 1.5 1.7 2.8Z" />
+              </svg>
+            </span>
+            <span class="green-thumb-count">${post.thumbs}</span>
           </button>
         </div>
       </article>
@@ -2262,9 +2318,185 @@ function openProfileGarden(gardenId) {
   switchPage("layoutPage");
 }
 
+function activeJournalEntries() {
+  state.journalEntries = normalizeJournalEntries(state.journalEntries);
+  return state.journalEntries.filter((entry) => !entry.gardenId || entry.gardenId === state.activeGardenId);
+}
+
+function journalDateLabel(dateText) {
+  const date = new Date(dateText);
+  if (Number.isNaN(date.getTime())) return "Today";
+  return date.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+}
+
+function journalTimeLabel(dateText) {
+  const date = new Date(dateText);
+  if (Number.isNaN(date.getTime())) return "Just now";
+  return date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+}
+
+function journalMatchesRange(entry) {
+  if (state.journalRange === "all") return true;
+  const created = new Date(entry.createdAt);
+  if (Number.isNaN(created.getTime())) return false;
+  const now = new Date();
+  if (state.journalRange === "year") return created.getFullYear() === now.getFullYear();
+  if (state.journalRange === "month") return created.getFullYear() === now.getFullYear() && created.getMonth() === now.getMonth();
+  if (state.journalRange === "week") {
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    start.setDate(start.getDate() - start.getDay());
+    const end = new Date(start);
+    end.setDate(start.getDate() + 7);
+    return created >= start && created < end;
+  }
+  return true;
+}
+
+function renderJournalPhotoPreview() {
+  if (!els.journalPhotoPreview || !els.journalPhotoStatus || !els.journalPhoto) return;
+  const files = [...(els.journalPhoto.files || [])].filter((file) => file.type.startsWith("image/")).slice(0, 3);
+  els.journalPhotoPreview.innerHTML = "";
+  if (!files.length) {
+    els.journalPhotoStatus.textContent = "No photos attached yet.";
+    return;
+  }
+  els.journalPhotoStatus.textContent = `${files.length} photo${files.length === 1 ? "" : "s"} ready to save${els.journalPhoto.files.length > 3 ? " · first 3 will be used" : ""}.`;
+  files.forEach((file) => {
+    const url = URL.createObjectURL(file);
+    const thumb = document.createElement("span");
+    thumb.className = "journal-photo-thumb pending";
+    const image = document.createElement("img");
+    image.alt = "";
+    image.src = url;
+    image.onload = () => URL.revokeObjectURL(url);
+    const caption = document.createElement("small");
+    caption.textContent = file.name;
+    thumb.append(image, caption);
+    els.journalPhotoPreview.append(thumb);
+  });
+}
+
+function renderJournalPage() {
+  if (!els.journalEntryList) return;
+  const garden = activeGarden();
+  if (els.journalGardenName && garden) {
+    els.journalGardenName.textContent = `${gardenSeason(garden)} · ${garden.name}`;
+  }
+  els.journalRangeButtons.forEach((button) => button.classList.toggle("active", button.dataset.journalRange === state.journalRange));
+  const entries = activeJournalEntries().filter(journalMatchesRange);
+  if (!entries.length) {
+    els.journalEntryList.innerHTML = `
+      <article class="journal-empty">
+        <strong>No journal entries yet.</strong>
+        <p>Write what you notice in this garden, add photos if helpful, and CultivAIte will save it with the date and time.</p>
+      </article>
+    `;
+    return;
+  }
+  const groups = new Map();
+  entries.forEach((entry) => {
+    const label = journalDateLabel(entry.createdAt);
+    if (!groups.has(label)) groups.set(label, []);
+    groups.get(label).push(entry);
+  });
+  els.journalEntryList.innerHTML = [...groups.entries()].map(([label, groupEntries]) => `
+    <section class="journal-date-group">
+      <h4>${escapeHtml(label)}</h4>
+      ${groupEntries.map((entry) => `
+        <article class="journal-entry">
+          <div class="journal-entry-top">
+            <span>${escapeHtml(journalTimeLabel(entry.createdAt))}</span>
+            <button type="button" data-delete-journal="${entry.id}">Delete</button>
+          </div>
+          ${entry.text ? `<p>${escapeHtml(entry.text)}</p>` : ""}
+          ${entry.photos.length ? `
+            <div class="journal-photo-grid">
+              ${entry.photos.map((photo) => `
+                <figure>
+                  <img src="${escapeHtml(photo.src)}" alt="" />
+                  <figcaption>${escapeHtml(photo.name)}</figcaption>
+                </figure>
+              `).join("")}
+            </div>
+          ` : ""}
+        </article>
+      `).join("")}
+    </section>
+  `).join("");
+}
+
+async function addJournalEntry(event) {
+  event.preventDefault();
+  if (!els.journalText || !els.journalPhoto) return;
+  const text = els.journalText.value.trim();
+  const files = [...(els.journalPhoto.files || [])].filter((file) => file.type.startsWith("image/")).slice(0, 3);
+  if (!text && !files.length) {
+    setSaveStatus("Add a journal note or photo first");
+    return;
+  }
+  const button = els.journalForm?.querySelector("button[type='submit']");
+  try {
+    if (button) {
+      button.disabled = true;
+      button.textContent = "Saving...";
+    }
+    const photos = [];
+    for (const file of files) {
+      photos.push({
+        id: `journal-photo-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        src: await prepareJournalPhoto(file),
+        name: file.name || "Journal photo"
+      });
+    }
+    const garden = activeGarden();
+    state.journalEntries = normalizeJournalEntries([
+      ...state.journalEntries,
+      {
+        id: `journal-${Date.now()}`,
+        gardenId: state.activeGardenId,
+        gardenName: garden?.name || "Garden",
+        text,
+        photos,
+        createdAt: new Date().toISOString()
+      }
+    ]);
+    els.journalText.value = "";
+    els.journalPhoto.value = "";
+    renderJournalPhotoPreview();
+    renderJournalPage();
+    setSaveStatus("Journal entry saved");
+    savePlan();
+  } catch (error) {
+    setSaveStatus(error.message || "Journal entry could not be saved");
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = "Save journal entry";
+    }
+  }
+}
+
+function deleteJournalEntry(entryId) {
+  if (!entryId) return;
+  const confirmed = window.confirm("Delete this journal entry?");
+  if (!confirmed) return;
+  state.journalEntries = state.journalEntries.filter((entry) => entry.id !== entryId);
+  renderJournalPage();
+  setSaveStatus("Journal entry deleted");
+  savePlan();
+}
+
+function setJournalRange(range) {
+  if (!["all", "year", "month", "week"].includes(range)) return;
+  state.journalRange = range;
+  renderJournalPage();
+  queueAutoSave();
+}
+
 function renderPages() {
   els.pages.forEach((page) => page.classList.toggle("active", page.id === state.activePageId));
   els.navButtons.forEach((button) => button.classList.toggle("active", button.dataset.page === state.activePageId));
+  renderJournalPage();
   renderProfilePage();
   renderTaskPage();
   renderCalendarPage();
@@ -2932,6 +3164,28 @@ async function prepareGardenCover(file) {
   return thumbnail;
 }
 
+async function prepareJournalPhoto(file) {
+  if (!file?.type?.startsWith("image/")) throw new Error("Choose journal photos only.");
+  if (file.size > 10 * 1024 * 1024) throw new Error("Choose photos smaller than 10 MB.");
+  const original = await fileToDataUrl(file);
+  const image = new Image();
+  await new Promise((resolve, reject) => {
+    image.onload = resolve;
+    image.onerror = () => reject(new Error("CultivAIte could not open that journal photo."));
+    image.src = original;
+  });
+  const longestSide = Math.max(image.naturalWidth, image.naturalHeight);
+  const scale = Math.min(1, 720 / longestSide);
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+  canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+  const context = canvas.getContext("2d");
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+  const thumbnail = canvas.toDataURL("image/jpeg", 0.68);
+  if (thumbnail.length > 360000) throw new Error("Choose a simpler journal photo so it can save with this garden.");
+  return thumbnail;
+}
+
 function applyPacketScan(details) {
   const sun = ["full", "part"].includes(details.sun) ? details.sun : "";
   const method = ["direct", "indoor", "transplant"].includes(details.plantingMethod) ? details.plantingMethod : "";
@@ -3167,6 +3421,16 @@ if (els.calendarPrev) els.calendarPrev.addEventListener("click", () => moveCalen
 if (els.calendarNext) els.calendarNext.addEventListener("click", () => moveCalendarMonth(1));
 if (els.calendarToday) els.calendarToday.addEventListener("click", jumpCalendarToToday);
 els.calendarViewButtons.forEach((button) => button.addEventListener("click", () => setCalendarView(button.dataset.calendarView)));
+if (els.journalForm) els.journalForm.addEventListener("submit", addJournalEntry);
+if (els.journalPhoto) els.journalPhoto.addEventListener("change", renderJournalPhotoPreview);
+els.journalRangeButtons.forEach((button) => button.addEventListener("click", () => setJournalRange(button.dataset.journalRange)));
+if (els.journalEntryList) {
+  els.journalEntryList.addEventListener("click", (event) => {
+    const deleteButton = event.target.closest("[data-delete-journal]");
+    if (!deleteButton) return;
+    deleteJournalEntry(deleteButton.dataset.deleteJournal);
+  });
+}
 if (els.calendarGrid) {
   els.calendarGrid.addEventListener("click", (event) => {
     const taskButton = event.target.closest("[data-calendar-task-key]");
