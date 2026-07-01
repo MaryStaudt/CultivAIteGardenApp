@@ -2956,6 +2956,22 @@ function gardenAiContext(question = "") {
   };
 }
 
+function addTrustedSourceStatus(answer, trustedSourceSearch) {
+  if (!trustedSourceSearch?.enabled) return answer;
+  if (/trusted source search:/i.test(answer)) return answer;
+
+  if (trustedSourceSearch.status === "searched_no_source_names") {
+    return `${answer}\n\nTrusted source search: connected, but no source file name was returned for this answer. Verify important details with local extension guidance when needed.`;
+  }
+
+  if (trustedSourceSearch.status === "sources_found" && !/sources checked:/i.test(answer)) {
+    const sourceCount = trustedSourceSearch.sourceCount || 1;
+    return `${answer}\n\nTrusted source search: checked ${sourceCount} approved source${sourceCount === 1 ? "" : "s"}.`;
+  }
+
+  return answer;
+}
+
 async function askSol(event) {
   event.preventDefault();
   const question = els.askInput.value.trim();
@@ -2980,6 +2996,7 @@ async function askSol(event) {
 
   let answer = "";
   let usedLiveAi = false;
+  let trustedSourceSearch = null;
   try {
     const response = await fetch("/api/ask", {
       method: "POST",
@@ -2989,12 +3006,15 @@ async function askSol(event) {
     const data = await response.json();
     if (!response.ok || !data.answer) throw new Error(data.error || "AI answer unavailable");
     answer = data.answer;
+    trustedSourceSearch = data.trustedSourceSearch || null;
     usedLiveAi = true;
   } catch (error) {
     const reason = error.message ? ` Reason: ${error.message}` : "";
     answer = `${answerGardenQuestion(question)}\n\nAI backend note: I used CultivAIte's built-in garden logic because the live AI connection is not available yet.${reason}`;
     console.warn("CultivAIte AI fallback used", error);
   }
+
+  answer = addTrustedSourceStatus(answer, trustedSourceSearch);
 
   if (!/product label|extension|verify locally|local guidance/i.test(answer)) {
     answer += "\n\nGuidance note: Conditions vary by location, weather, soil, pests, and plant variety. Verify important planting, pest, or safety decisions with local extension resources when needed.";
