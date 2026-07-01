@@ -2,6 +2,19 @@
 
 This is the step that connects the `trusted-sources` idea to the Ask AI page.
 
+## Step 2: Source Search Flow
+
+This is what should happen before CultivAIte gives an AI answer:
+
+1. A user asks a garden question.
+2. CultivAIte sends the question to OpenAI.
+3. OpenAI searches the approved trusted-source vector store.
+4. OpenAI sends the best matching source pieces to the AI.
+5. CultivAIte answers using the user's garden details and the trusted source matches.
+6. If source names are returned, the answer includes a short `Sources checked:` line.
+
+In plain English: the AI should look in your approved library before it answers.
+
 ## What This Does
 
 When a user asks CultivAIte a gardening question:
@@ -52,6 +65,21 @@ OPENAI_TRUSTED_SOURCES_VECTOR_STORE_ID
 Paste the `vs_...` ID as the value.
 
 Then redeploy CultivAIte.
+
+## What Mary Needs To Do Now
+
+1. Upload the updated `api`, `src`, and `trusted-sources` files to GitHub.
+2. In OpenAI, create a vector store named `CultivAIte Trusted Sources`.
+3. Upload only approved trusted-source files to that vector store.
+4. Copy the vector store ID that starts with `vs_`.
+5. In Vercel, add this environment variable:
+
+```text
+OPENAI_TRUSTED_SOURCES_VECTOR_STORE_ID
+```
+
+6. Paste the `vs_...` ID as the value.
+7. Redeploy CultivAIte.
 
 ## Optional Strict Mode
 

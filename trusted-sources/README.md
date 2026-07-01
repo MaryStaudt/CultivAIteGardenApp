@@ -53,4 +53,4 @@ When adding a source, include:
 
 ## Important
 
-This folder creates the trusted-source structure. The next development step is connecting the Ask AI backend so it reads these rules before answering users.
+This folder creates the trusted-source structure. The Ask AI backend is ready to use this library once the OpenAI vector store ID is added in Vercel.
