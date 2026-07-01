@@ -131,6 +131,40 @@ function addSourceNote(answer, citations) {
   return `${answer}\n\nSources checked: ${[...new Set(sources)].slice(0, 6).join(", ")}`;
 }
 
+function trustedSearchDetails(enabled, citations) {
+  const sourceList = Array.from(citations.values()).filter((source) => source.filename || source.fileId);
+  if (!enabled) {
+    return {
+      enabled: false,
+      vectorStoreConfigured: false,
+      status: "not_connected",
+      message: "Trusted source search is not connected yet.",
+      sourceCount: 0,
+      citations: []
+    };
+  }
+
+  if (!sourceList.length) {
+    return {
+      enabled: true,
+      vectorStoreConfigured: true,
+      status: "searched_no_source_names",
+      message: "Trusted source search ran, but OpenAI did not return source file names for this answer.",
+      sourceCount: 0,
+      citations: []
+    };
+  }
+
+  return {
+    enabled: true,
+    vectorStoreConfigured: true,
+    status: "sources_found",
+    message: "Trusted source search found approved source matches.",
+    sourceCount: sourceList.length,
+    citations: sourceList
+  };
+}
+
 async function callOpenAI(payload, apiKey, model) {
   const response = await fetch(OPENAI_URL, {
     method: "POST",
@@ -213,7 +247,7 @@ module.exports = async function handler(request, response) {
       "Use plain, practical language for home gardeners.",
       "Base advice first on the provided garden context: ZIP, ZIP source, USDA zone, frost timing, plot dimensions, plant list, spacing, crop families, soil demand, and warnings.",
       trustedSearchEnabled
-        ? "Trusted source search is connected. Before answering, use the file_search tool to find the most relevant trusted source passages. Use the retrieved trusted source passages plus the provided garden context for factual claims about planting dates, pests, disease, soil, spacing, planting depth, companion planting, water needs, sun, and safety-sensitive guidance. If the retrieved trusted sources do not cover the question, say that the trusted source library does not yet cover that detail and give a cautious next step. End source-backed answers with a short 'Sources checked:' line naming the documents or organizations used."
+        ? "Trusted source search is connected. Before answering, use the file_search tool to find the most relevant trusted source passages. Use the retrieved trusted source passages plus the provided garden context for factual claims about planting dates, pests, disease, soil, spacing, planting depth, companion planting, water needs, sun, and safety-sensitive guidance. If the retrieved trusted sources do not cover the question, say that the trusted source library does not yet cover that detail and give a cautious next step. End source-backed answers with a short 'Sources checked:' line naming the documents or organizations used. Do not invent source names."
         : "Trusted source search is not connected yet. Use the provided garden context and clearly say when a detail should be verified with local extension guidance.",
       "If the user's question includes a ZIP code that differs from the planner ZIP, prioritize the ZIP from the question and briefly say so.",
       "When discussing regional facts, prefer the USDA zone and extension-style guidance already provided in the garden context. If exact local extension data is not available, say what should be verified locally.",
@@ -241,10 +275,12 @@ module.exports = async function handler(request, response) {
       payload.tools = [
         {
           type: "file_search",
-          vector_store_ids: trustedVectorStoreIds
+          vector_store_ids: trustedVectorStoreIds,
+          max_num_results: 6
         }
       ];
       payload.tool_choice = "required";
+      payload.include = ["file_search_call.results"];
     }
 
     let answer = "";
@@ -283,11 +319,7 @@ module.exports = async function handler(request, response) {
 
     sendJson(response, 200, {
       answer,
-      trustedSourceSearch: {
-        enabled: trustedSearchEnabled,
-        vectorStoreConfigured: trustedSearchEnabled,
-        citations: Array.from(citations.values())
-      }
+      trustedSourceSearch: trustedSearchDetails(trustedSearchEnabled, citations)
     });
   } catch (error) {
     sendJson(response, 500, { error: error.message || "CultivAIte AI could not answer right now." });
