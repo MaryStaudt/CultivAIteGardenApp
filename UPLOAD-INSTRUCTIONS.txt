@@ -1,19 +1,46 @@
-Upload these files to the matching places in your CultivAIte GitHub repository:
+CultivAIte AI Source Search Step 2
 
-1. api/ask.js
-   Replace your existing api/ask.js file.
+Upload or replace these files in your CultivAIte app GitHub repo:
 
-2. trusted-sources/VECTOR-STORE-SETUP.md
-   Add this new file inside the trusted-sources folder.
+- api/ask.js
+- src/standalone.js
+- trusted-sources folder
+- .env.example
 
-3. README.md
-   Replace your existing README.md file if you want the notes in GitHub.
+What this update does:
 
-4. .env.example
-   This is only a reference file. If GitHub/Finder hides it, do not stress.
-   The real important Vercel setting is:
+- Connects the Ask AI backend to OpenAI trusted-source search when your vector store ID is added in Vercel.
+- Searches approved trusted-source files before answering gardening questions.
+- Adds a short source note when source names are returned.
+- Keeps local fallback logic available if the live AI connection is not ready.
 
-   OPENAI_TRUSTED_SOURCES_VECTOR_STORE_ID
+OpenAI setup:
 
-After uploading, go to Vercel and add that environment variable with your OpenAI vector store ID.
-The ID starts with vs_.
+1. Go to the OpenAI Platform.
+2. Open Storage or Vector Stores.
+3. Create a vector store named CultivAIte Trusted Sources.
+4. Upload only approved trusted-source files, such as USDA files, university extension files, land-grant university files, peer-reviewed gardening/agriculture papers, or expert-reviewed CultivAIte guides.
+5. Copy the vector store ID. It should start with vs_.
+
+Vercel setup:
+
+1. Open your CultivAIte app project in Vercel.
+2. Go to Environment Variables.
+3. Add this variable:
+
+OPENAI_TRUSTED_SOURCES_VECTOR_STORE_ID
+
+4. Paste your vs_ ID as the value.
+5. Redeploy CultivAIte.
+
+Do not turn on this setting yet unless you are sure the source search is working:
+
+OPENAI_REQUIRE_TRUSTED_SOURCES=true
+
+Test:
+
+Ask CultivAIte:
+
+How should I start tomato seeds in my zone?
+
+If the trusted source library has a matching file, the answer should include Sources checked: or a trusted-source search note.
